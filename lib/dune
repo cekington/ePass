@@ -1,0 +1,6 @@
+(library
+ (name ePass)
+ (libraries core)
+ )
+
+(include_subdirs unqualified)
