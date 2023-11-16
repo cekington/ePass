@@ -5,6 +5,7 @@
        | '1'
        | '+' '{' <alts> '}'
        | '&' '{' <alts> '}'
+       | <tp> '|' <tp>
        | <tp> '*' <tp>
        | <tp> '-o' <tp>
        | '(' <tp> ')'
@@ -14,7 +15,7 @@
 <parm> ::= '(' <id> ':' <tp> ')'
 
 <proc> ::= 'send' <id> <msg> [ ';' <proc> ]
-         | 'recv' <id> '(' <match> ')'
+         | 'recv' <id> '(' <cont> ')'
          | 'fwd' <id> <id>
          | 'call' <id> '(' <args> ')' '[' <args> ']' [ ';' <proc> ]
          | 'cancel' <id>
@@ -25,16 +26,16 @@
 
 <args> ::= <id> [ ',' <args> ]
 
-<match> ::= <msg> '=>' <proc> [ '|' <match> ]
+<cont> ::= <msg> '=>' <proc> [ '|' <cont> ]
 
 <msg> ::= '(' ')'
         | <tag>
         | <id>
 
+<parms> ::= <id> : <tp> [, <parms>]
+
 <defn> ::= 'type' <id> = <tp>
-         | 'proc' <id> <parm> <parms>* = <proc>
-         | 'exec' <id>   % requires empty antecedent
-         | 'fail' <defn>
+         | 'proc' <id> '(' <parms> ')' '[' <parms> ']' '=' <proc>
 
 <prog> ::= <defn>*
 ```
