@@ -1,2 +1,0 @@
-let () = EPass.Top.main()
-
