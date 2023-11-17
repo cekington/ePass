@@ -22,11 +22,17 @@
 
 <procfollow> ::= · | ';' <proc>
 
+<simpleproc> ::= 'send' <id> <msg>
+         | 'recv' <id> '(' <cont> ')'
+         | 'fwd' <id> <id>
+         | 'call' <id> '(' <args> ')' '[' <args> ']' 
+         | 'cancel' <id>
+
 <proc> ::= 'send' <id> <msg> <procfollow>
          | 'recv' <id> '(' <cont> ')'
          | 'fwd' <id> <id>
          | 'call' <id> '(' <args> ')' '[' <args> ']' <procfollow>
-         | 'cancel' <id>
+         | 'cancel' <id> <procfollow>
          | 'try' <proc> 'catch' <proc>
          | 'raise' <proc>
          | <id> <annot> '<-' <simpleproc> ';' <proc>

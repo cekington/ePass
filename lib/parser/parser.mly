@@ -117,7 +117,7 @@ simpleproc :
   | CALL; p = ID; LPAREN; provides = args; RPAREN; LBRACKET; uses = args; RBRACKET;
     { Call (p, provides, uses, None) }
   | CANCEL; a = ID;
-    { Cancel a }
+    { Cancel (a, None) }
 
 proc :  
   | SEND; a = ID; m = msg; pf = procfollow
@@ -128,8 +128,8 @@ proc :
     { Fwd (a, b) }
   | CALL; p = ID; LPAREN; provides = args; RPAREN; LBRACKET; uses = args; RBRACKET; pf = procfollow;
     { Call (p, provides, uses, pf) }
-  | CANCEL; a = ID;
-    { Cancel a }
+  | CANCEL; a = ID; pf = procfollow;
+    { Cancel (a, pf) }
   | TRY; p = proc; CATCH; q = proc;
     { Trycatch (p, q) }
   | RAISE; p = proc;

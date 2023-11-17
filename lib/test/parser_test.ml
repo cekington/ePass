@@ -26,7 +26,7 @@ let%expect_test "Test parsing 2" =
   in
   let ast = parse program in
   print_endline (E.Print.pp_prog ast);
-  [%expect{| proc rev (c : bool) [a : bool] = recv a ('true => send c 'false ;fwd c a | 'false => send c 'true ;fwd c a) |}]
+  [%expect{| proc rev (c : bool) [a : bool] = recv a ('true => send c 'false; fwd c a | 'false => send c 'true; fwd c a) |}]
 ;;
 
 let%expect_test "Test parsing 3" =
@@ -44,7 +44,7 @@ let%expect_test "Test parsing 3" =
   in
   let ast = parse program in
   print_endline (E.Print.pp_prog ast);
-  [%expect{| proc pred (x : std) [y : pos] = recv y ('b0 => send x 'b1 ;call pred (x) [y]  | 'b1 => recv y ('e => send x 'e ;fwd x y | 'b0 => send x 'b0 ;send x 'b0 ;fwd x y | 'b1 => send x 'b0 ;send x 'b1 ;fwd x y)) |}]
+  [%expect{| proc pred (x : std) [y : pos] = recv y ('b0 => send x 'b1; call pred (x) [y] | 'b1 => recv y ('e => send x 'e; fwd x y | 'b0 => send x 'b0; send x 'b0; fwd x y | 'b1 => send x 'b0; send x 'b1; fwd x y)) |}]
 ;;
 
 
@@ -65,4 +65,24 @@ let%expect_test "Test parsing 5" =
   print_endline (E.Print.pp_prog ast);
   [%expect{| proc inf () [a : bool] = call inf () [a] |}]
 ;;
+
+let%expect_test "Test parsing 6" =
+  let program =
+      "proc fail (a : nat) [b : nat] = raise cancel a; cancel b"
+  in
+  let ast = parse program in
+  print_endline (E.Print.pp_prog ast);
+  [%expect{| proc fail (a : nat) [b : nat] = raise (cancel a; cancel b) |}]
+;;
+
+let%expect_test "Test parsing 7" =
+  let program =
+      "proc inf (c : bool) [a : bool] = 
+      try call fail (a) [] catch send c 'false; send c ()"
+  in
+  let ast = parse program in
+  print_endline (E.Print.pp_prog ast);
+  [%expect{| proc inf (c : bool) [a : bool] = try (call fail (a) []) catch (send c 'false; send c ()) |}]
+;;
+
 

@@ -19,7 +19,7 @@ type proc =
   | Recv of string * cont 
   | Fwd of string * string
   | Call of string * string list * string list * proc option
-  | Cancel of string
+  | Cancel of string * proc option
   | Trycatch of proc * proc
   | Raise of proc 
   | Cut of string * typ option * proc * proc
@@ -52,22 +52,26 @@ module Print = struct
   | Channel c -> c
 
   let rec pp_proc = function
-  | Send (c, m, optp) -> sprintf "send %s %s %s" c (pp_msg m) (
+  | Send (c, m, optp) -> sprintf "send %s %s%s" c (pp_msg m) (
       match optp with
       | None -> ""
-      | Some p -> ";" ^ pp_proc p
+      | Some p -> "; " ^ pp_proc p
     )
   | Recv (c, k) -> sprintf "recv %s %s" c (pp_cont k)
   | Fwd (c1, c2) -> sprintf "fwd %s %s" c1 c2
-  | Call (f, xs, ys, optp) -> sprintf "call %s (%s) [%s] %s" f (String.concat ~sep:", " xs) (String.concat ~sep:", " ys) (
+  | Call (f, xs, ys, optp) -> sprintf "call %s (%s) [%s]%s" f (String.concat ~sep:", " xs) (String.concat ~sep:", " ys) (
       match optp with
       | None -> ""
-      | Some p -> ";" ^ pp_proc p
+      | Some p -> "; " ^ pp_proc p
     )
-  | Cancel c -> sprintf "cancel %s" c
-  | Trycatch (p1, p2) -> sprintf "try %s catch %s" (pp_proc p1) (pp_proc p2)
-  | Raise p -> sprintf "raise %s" (pp_proc p)
-  | Cut (c, optt, p1, p2) -> sprintf "cut %s<-%s; %s" (
+  | Cancel (c, optp) -> sprintf "cancel %s%s" c (
+      match optp with
+      | None -> ""
+      | Some p -> "; " ^ pp_proc p
+  )
+  | Trycatch (p1, p2) -> sprintf "try (%s) catch (%s)" (pp_proc p1) (pp_proc p2)
+  | Raise p -> sprintf "raise (%s)" (pp_proc p)
+  | Cut (c, optt, p1, p2) -> sprintf "cut %s<-(%s); %s" (
       match optt with
       | None -> c
       | Some t -> sprintf "(%s:%s)" c (pp_typ t)
