@@ -58,6 +58,10 @@ open Extsyn
 
 %start <prog> prog
 
+%right LOLLI
+%right TIMES
+%right PAR
+
 %%
 
 typ :
