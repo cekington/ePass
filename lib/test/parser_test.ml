@@ -7,7 +7,7 @@ let parse (s : string) : E.prog =
   let lexbuf = Lexing.from_string s in
     Parser.prog Lexer.read lexbuf
 
-let%expect_test "Test parsing" =
+let%expect_test "Test parsing 1" =
   let program =
       "type bool = +{'true : 1, 'false : 1}"
   in
@@ -16,10 +16,11 @@ let%expect_test "Test parsing" =
   [%expect{| type bool = ('true : 1 + 'false : 1) |}]
 ;;
 
-let%expect_test "Test parsing" =
+let%expect_test "Test parsing 2" =
   let program =
       "proc rev (c : bool) [a : bool] =
-        recv a ('true => send c 'false; fwd c a
+        recv a (
+          'true => send c 'false; fwd c a
         | 'false => send c 'true; fwd c a)
       "
   in
@@ -27,3 +28,41 @@ let%expect_test "Test parsing" =
   print_endline (E.Print.pp_prog ast);
   [%expect{| proc rev (c : bool) [a : bool] = recv a ('true => send c 'false ;fwd c a | 'false => send c 'true ;fwd c a) |}]
 ;;
+
+let%expect_test "Test parsing 3" =
+  let program =
+      "proc pred (x : std) [y : pos] = 
+        recv y (
+          'b0 => send x 'b1; call pred (x) [y]
+        | 'b1 => recv y (
+            'e => send x 'e; fwd x y
+          | 'b0 => send x 'b0; send x 'b0; fwd x y
+          | 'b1 => send x 'b0; send x 'b1; fwd x y
+          )
+        )
+      "
+  in
+  let ast = parse program in
+  print_endline (E.Print.pp_prog ast);
+  [%expect{| proc pred (x : std) [y : pos] = recv y ('b0 => send x 'b1 ;call pred (x) [y]  | 'b1 => recv y ('e => send x 'e ;fwd x y | 'b0 => send x 'b0 ;send x 'b0 ;fwd x y | 'b1 => send x 'b0 ;send x 'b1 ;fwd x y)) |}]
+;;
+
+
+let%expect_test "Test parsing 4" =
+  let program =
+      "proc drop () [a : bool] = cancel a"
+  in
+  let ast = parse program in
+  print_endline (E.Print.pp_prog ast);
+  [%expect{| proc drop () [a : bool] = cancel a |}]
+;;
+
+let%expect_test "Test parsing 5" =
+  let program =
+      "proc inf () [a : bool] = call inf () [a]"
+  in
+  let ast = parse program in
+  print_endline (E.Print.pp_prog ast);
+  [%expect{| proc inf () [a : bool] = call inf () [a] |}]
+;;
+

@@ -149,6 +149,7 @@ argsfollow :
   ;
 
 args :
+  | { [] }
   | id = ID; a = argsfollow;
     { id :: a }
   ;
@@ -160,6 +161,7 @@ annoargsfollow :
   ;
 
 annoargs : 
+  | { [] }
   | x = ID; COLON; t = typ; a = annoargsfollow
     { (x, t) :: a }
   ;
