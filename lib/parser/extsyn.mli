@@ -23,7 +23,9 @@ type proc =
   | Cut of string * typ option * proc * proc
 
 and cont = 
-  | Cont of (msg * proc) list
+  | ContUnit of proc 
+  | ContLabel of (string * proc) list
+  | ContChannel of string * proc
 
 type def = 
   | TypDef of string * typ

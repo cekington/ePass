@@ -25,7 +25,9 @@ type proc =
   | Cut of string * typ option * proc * proc
 
 and cont = 
-  | Cont of (msg * proc) list
+  | ContUnit of proc 
+  | ContLabel of (string * proc) list
+  | ContChannel of string * proc
 
 type def = 
   | TypDef of string * typ
@@ -40,9 +42,9 @@ module Print = struct
   | Tensor (t1, t2) -> sprintf "(%s * %s)" (pp_typ t1) (pp_typ t2)
   | Par (t1, t2) -> sprintf "(%s | %s)" (pp_typ t1) (pp_typ t2)
   | Plus ts -> let ts' = List.map ~f:(fun (s, t) -> s ^ " : " ^ (pp_typ t)) ts in 
-    "(" ^ (String.concat ~sep:" + " ts') ^ ")"
+    "{" ^ (String.concat ~sep:" + " ts') ^ "}"
   | With ts -> let ts' = List.map ~f:(fun (s, t) -> s ^ " : " ^ (pp_typ t)) ts in 
-  "(" ^ (String.concat ~sep:" & " ts') ^ ")"
+  "{" ^ (String.concat ~sep:" & " ts') ^ "}"
   | One -> "1"
   | Lolli (t1, t2) -> sprintf "%s -o %s" (pp_typ t1) (pp_typ t2)
 
@@ -57,7 +59,7 @@ module Print = struct
       | None -> ""
       | Some p -> "; " ^ pp_proc p
     )
-  | Recv (c, k) -> sprintf "recv %s %s" c (pp_cont k)
+  | Recv (c, k) -> sprintf "recv %s (%s)" c (pp_cont k)
   | Fwd (c1, c2) -> sprintf "fwd %s %s" c1 c2
   | Call (f, xs, ys, optp) -> sprintf "call %s (%s) [%s]%s" f (String.concat ~sep:", " xs) (String.concat ~sep:", " ys) (
       match optp with
@@ -78,8 +80,10 @@ module Print = struct
     ) (pp_proc p1) (pp_proc p2)
 
   and pp_cont = function
-  | Cont ls -> let ls' = List.map ~f:(fun (s, p) -> (pp_msg s) ^ " => " ^ (pp_proc p)) ls in 
-    "(" ^ (String.concat ~sep:" | " ls') ^ ")"
+  | ContUnit p -> sprintf "() => %s" (pp_proc p)
+  | ContLabel ks -> let ks' = List.map ~f:(fun (s, p) -> s ^ " => " ^ (pp_proc p)) ks in 
+    (String.concat ~sep:" | " ks')
+  | ContChannel (c, p) -> sprintf "%s => %s" c (pp_proc p)
 
   let pp_def = function
   | TypDef (s, t) -> sprintf "type %s = %s" s (pp_typ t)

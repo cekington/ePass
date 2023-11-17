@@ -52,7 +52,7 @@ open Extsyn
 %type <string list> args
 %type <(string * typ) list> annoargsfollow
 %type <(string * typ) list> annoargs
-%type <(msg * proc) list> contfollow
+%type <(string * proc) list> contfollow
 %type <cont> cont
 %type <msg> msg
 %type <def> defn
@@ -168,13 +168,17 @@ annoargs :
 
 contfollow :
   | { [] }
-  | BAR; m = msg; BRARROW; p = proc; c = contfollow
+  | BAR; m = TAG; BRARROW; p = proc; c = contfollow
     { (m, p) :: c }
   ;
 
 cont : 
-  | m = msg; BRARROW; p = proc; c = contfollow
-    { Cont ((m, p) :: c) }
+  | LPAREN; RPAREN; BRARROW; p = proc;
+    { ContUnit p }
+  | x = ID;  BRARROW; p = proc;
+    { ContChannel (x, p) }
+  | m = TAG; BRARROW; p = proc; c = contfollow
+    { ContLabel ((m, p) :: c) }
   ;
 
 msg : 

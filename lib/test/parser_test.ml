@@ -1,4 +1,3 @@
-
 open Core
 
 module E = Extsyn
@@ -13,7 +12,7 @@ let%expect_test "Test parsing 1" =
   in
   let ast = parse program in
   print_endline (E.Print.pp_prog ast);
-  [%expect{| type bool = ('true : 1 + 'false : 1) |}]
+  [%expect{| type bool = {'true : 1 + 'false : 1} |}]
 ;;
 
 let%expect_test "Test parsing 2" =
@@ -83,6 +82,34 @@ let%expect_test "Test parsing 7" =
   let ast = parse program in
   print_endline (E.Print.pp_prog ast);
   [%expect{| proc inf (c : bool) [a : bool] = try (call fail (a) []) catch (send c 'false; send c ()) |}]
+;;
+
+let%expect_test "Test parsing 8" =
+  let program =
+      "type store = &{ 'ins : bin -o store, 'del : +{ 'none : 1, 'some : bin * store } }
+      proc empty_queue (s : store) [] = 
+        recv s (
+        'ins => recv s (x => t <- call empty_queue (t) []; call node_queue (s) [x, t])
+        | 'del => send s 'none; send s ()
+        )
+
+      proc node_queue (s : store) [x : bin, t : store] = 
+        recv s (
+          'ins => recv s (y => ss <- call node_queue (ss) [x, t]; call node_queue (s) [y, ss])
+          | 'del => send t 'del; 
+            recv t (
+              'none => recv t (() => send s 'some; send s x; call empty_queue (s) [])
+            | 'some => recv t (y => send s 'some; send s y; call node_queue (s) [x, t])
+          )
+        )
+      "
+  in
+  let ast = parse program in
+  print_endline (E.Print.pp_prog ast);
+  [%expect{|
+    type store = {'ins : bin -o store & 'del : {'none : 1 + 'some : (bin * store)}}
+    proc empty_queue (s : store) [] = recv s ('ins => recv s (x => cut t<-(call empty_queue (t) []); call node_queue (s) [x, t]) | 'del => send s 'none; send s ())
+    proc node_queue (s : store) [x : bin, t : store] = recv s ('ins => recv s (y => cut ss<-(call node_queue (ss) [x, t]); call node_queue (s) [y, ss]) | 'del => send t 'del; recv t ('none => recv t (() => send s 'some; send s x; call empty_queue (s) []) | 'some => recv t (y => send s 'some; send s y; call node_queue (s) [x, t]))) |}]
 ;;
 
 
