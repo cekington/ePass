@@ -29,7 +29,8 @@
          | 'cancel' <id>
          | 'try' <proc> 'catch' <proc>
          | 'raise' <proc>
-         | <id> <annot> '<-' <proc> ';' <proc>
+         | <id> <annot> '<-' <simpleproc> ';' <proc>
+         | <id> <annot> '<-' '(' <proc> ')' ';' <proc>
          | '(' <proc> ')'
 
 <argsfollow> ::= · | ',' <id> <argsfollow>

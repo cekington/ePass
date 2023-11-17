@@ -13,5 +13,17 @@ let%expect_test "Test parsing" =
   in
   let ast = parse program in
   print_endline (E.Print.pp_prog ast);
-  [%expect]
+  [%expect{| type bool = ('true : 1 + 'false : 1) |}]
+;;
+
+let%expect_test "Test parsing" =
+  let program =
+      "proc rev (c : bool) [a : bool] =
+        recv a ('true => send c 'false; fwd c a
+        | 'false => send c 'true; fwd c a)
+      "
+  in
+  let ast = parse program in
+  print_endline (E.Print.pp_prog ast);
+  [%expect{| proc rev (c : bool) [a : bool] = recv a ('true => send c 'false ;fwd c a | 'false => send c 'true ;fwd c a) |}]
 ;;

@@ -45,6 +45,7 @@ open Extsyn
 %type <(string * typ) list> altsfollow
 %type <(string * typ) list> alts
 %type <typ option> annot
+%type <proc> simpleproc
 %type <proc option> procfollow
 %type <proc> proc
 %type <string list> argsfollow
@@ -106,6 +107,18 @@ procfollow :
     { Some p }
   ;
 
+simpleproc : 
+  | SEND; a = ID; m = msg;
+    { Send (a, m, None) }
+  | RECV; a = ID; LPAREN; c = cont; RPAREN;
+    { Recv (a, c) }
+  | FWD; a = ID; b = ID;
+    { Fwd (a, b) }
+  | CALL; p = ID; LPAREN; provides = args; RPAREN; LBRACKET; uses = args; RBRACKET;
+    { Call (p, provides, uses, None) }
+  | CANCEL; a = ID;
+    { Cancel a }
+
 proc :  
   | SEND; a = ID; m = msg; pf = procfollow
     { Send (a, m, pf) }
@@ -121,7 +134,9 @@ proc :
     { Trycatch (p, q) }
   | RAISE; p = proc;
     { Raise p }
-  | x = ID; t = annot; SLARROW; p = proc; SEMICOLON; q = proc
+  | x = ID; t = annot; SLARROW; p = simpleproc; SEMICOLON; q = proc
+    { Cut (x, t, p, q) }
+  | x = ID; t = annot; SLARROW; LPAREN; p = proc; RPAREN; SEMICOLON; q = proc
     { Cut (x, t, p, q) }
   | LPAREN; p = proc; RPAREN;
     { p }
@@ -145,7 +160,7 @@ annoargsfollow :
   ;
 
 annoargs : 
-  | x = ID; COMMA; t = typ; a = annoargsfollow
+  | x = ID; COLON; t = typ; a = annoargsfollow
     { (x, t) :: a }
   ;
 
