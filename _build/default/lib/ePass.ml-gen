@@ -3,5 +3,11 @@
 (** @canonical EPass.Extsyn *)
 module Extsyn = EPass__Extsyn
 
+(** @canonical EPass.Lexer *)
+module Lexer = EPass__Lexer
+
+(** @canonical EPass.Parser *)
+module Parser = EPass__Parser
+
 (** @canonical EPass.Top *)
 module Top = EPass__Top

@@ -1,41 +1,55 @@
 # ePass
 ## Grammer for ePass
 ```
+<idchar> ::= [a-zA-Z_0-9']*
+<id> ::= [a-zA-Z_]<idchar>
+<tag> ::= '<idchar>+
+
 <tp> ::= <id>
        | '1'
        | '+' '{' <alts> '}'
        | '&' '{' <alts> '}'
-       | <tp> '|' <tp>
+       | <tp> '@' <tp>
        | <tp> '*' <tp>
        | <tp> '-o' <tp>
        | '(' <tp> ')'
 
-<alts> ::= <tag> ':' <tp> [ ',' <alts> ]
+<altsfollow> ::= · | ',' <tag> ':' <tp> <altsfollow>
 
-<parm> ::= '(' <id> ':' <tp> ')'
+<alts> ::= <tag> ':' <tp> <altsfollow>
 
-<proc> ::= 'send' <id> <msg> [ ';' <proc> ]
+<annot> ::= · | ':' <tp>
+
+<procfollow> ::= · | ';' <proc>
+
+<proc> ::= 'send' <id> <msg> <procfollow>
          | 'recv' <id> '(' <cont> ')'
          | 'fwd' <id> <id>
-         | 'call' <id> '(' <args> ')' '[' <args> ']' [ ';' <proc> ]
+         | 'call' <id> '(' <args> ')' '[' <args> ']' <procfollow>
          | 'cancel' <id>
          | 'try' <proc> 'catch' <proc>
          | 'raise' <proc>
-         | <id> [ ':' <tp> ] '<-' <proc> ';' <proc>
+         | <id> <annot> '<-' <proc> ';' <proc>
          | '(' <proc> ')'
 
-<args> ::= <id> [ ',' <args> ]
+<argsfollow> ::= · | ',' <id> <argsfollow>
 
-<cont> ::= <msg> '=>' <proc> [ '|' <cont> ]
+<args> ::= <id> <argsfollow>
+
+<annoargsfollow> ::= · | ',' <id> ':' <type> <annoargsfollow>
+
+<annoargs> ::= <id> ':' <type> <annoargsfollow>
+
+<contfollow> ::= · | '|' <msg> '=>' <proc> <contfollow>
+
+<cont> ::= <msg> '=>' <proc> <contfollow>
 
 <msg> ::= '(' ')'
         | <tag>
         | <id>
 
-<parms> ::= <id> : <tp> [, <parms>]
-
 <defn> ::= 'type' <id> = <tp>
-         | 'proc' <id> '(' <parms> ')' '[' <parms> ']' '=' <proc>
+         | 'proc' <id> '(' <annoargs> ')' '[' <annoargs> ']' '=' <proc>
 
-<prog> ::= <defn>*
+<prog> ::= · | <defn> <prog>
 ```

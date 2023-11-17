@@ -1,1 +1,1 @@
-lib/top.ml: Core Extsyn
+lib/top.ml: Core Extsyn Lexer Lexing Parser

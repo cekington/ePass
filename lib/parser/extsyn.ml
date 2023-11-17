@@ -10,8 +10,8 @@ type typ =
   | Lolli of typ * typ
 
 type msg = 
-  | Label of string
   | Unit
+  | Label of string
   | Channel of string
 
 type proc = 
@@ -25,13 +25,13 @@ type proc =
   | Cut of string * typ option * proc * proc
 
 and cont = 
-  | ContLabel of (string * proc) list
-  | ContUnit of proc
-  | ContChannel of string * proc
+  | Cont of (msg * proc) list
 
 type def = 
   | TypDef of string * typ
   | ProcDef of string * (string * typ) list * (string * typ) list * proc
+
+type prog = def list
 
 module Print = struct
 
@@ -74,10 +74,8 @@ module Print = struct
     ) (pp_proc p1) (pp_proc p2)
 
   and pp_cont = function
-  | ContLabel ls -> let ls' = List.map ~f:(fun (s, p) -> s ^ " => " ^ (pp_proc p)) ls in 
+  | Cont ls -> let ls' = List.map ~f:(fun (s, p) -> (pp_msg s) ^ " => " ^ (pp_proc p)) ls in 
     "(" ^ (String.concat ~sep:" | " ls') ^ ")"
-  | ContUnit p -> sprintf "(() => %s)" (pp_proc p)
-  | ContChannel (c, p) -> sprintf "(%s => %s)" c (pp_proc p)
 
   let pp_def = function
   | TypDef (s, t) -> sprintf "type %s = %s" s (pp_typ t)
@@ -85,5 +83,9 @@ module Print = struct
     let xs' = List.map ~f:(fun (s, t) -> s ^ " : " ^ (pp_typ t)) xs in 
     let ys' = List.map ~f:(fun (s, t) -> s ^ " : " ^ (pp_typ t)) ys in
       sprintf "proc %s (%s) [%s] = %s" f (String.concat ~sep:", " xs') (String.concat ~sep:", " ys') (pp_proc p)
+
+  let rec pp_prog = function
+  | [] -> ""
+  | d :: ds -> (pp_def d) ^ "\n" ^ (pp_prog ds)
 
 end

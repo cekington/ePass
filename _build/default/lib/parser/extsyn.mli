@@ -8,8 +8,8 @@ type typ =
   | Lolli of typ * typ
 
 type msg = 
-  | Label of string
   | Unit
+  | Label of string
   | Channel of string
 
 type proc = 
@@ -23,13 +23,13 @@ type proc =
   | Cut of string * typ option * proc * proc
 
 and cont = 
-  | ContLabel of (string * proc) list
-  | ContUnit of proc
-  | ContChannel of string * proc
+  | Cont of (msg * proc) list
 
 type def = 
   | TypDef of string * typ
   | ProcDef of string * (string * typ) list * (string * typ) list * proc
+
+type prog = def list
 
 module Print : sig
 
@@ -38,5 +38,6 @@ module Print : sig
   val pp_proc : proc -> string
   val pp_cont : cont -> string
   val pp_def : def -> string
+  val pp_prog : prog -> string
 
 end
