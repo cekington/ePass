@@ -1,6 +1,9 @@
 (library
  (name ePass)
  (libraries core)
+ (inline_tests)
+ (preprocess
+  (pps ppx_expect))
  )
 
 (include_subdirs unqualified)
