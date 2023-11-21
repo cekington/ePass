@@ -31,6 +31,9 @@ open Extsyn
 
 %token TYPE 
 %token PROC 
+%token EXNPROC
+%token FAIL
+%token EXEC
 
 %token LPAREN
 %token RPAREN
@@ -195,6 +198,12 @@ defn :
     { TypDef (id, t) }
   | PROC; id = ID; LPAREN; provides = annoargs; RPAREN; LBRACKET; uses = annoargs; RBRACKET; EQUAL; p = proc;
     { ProcDef (id, provides, uses, p) }
+  | EXNPROC; id = ID; LPAREN; provides = annoargs; RPAREN; LBRACKET; uses = annoargs; RBRACKET; EQUAL; p = proc;
+    { ExnProcDef (id, provides, uses, p) }
+  | FAIL; d = defn;
+    { Fail d }
+  | EXEC; p = ID;
+    { Exec p }
   ;
 
 prog :

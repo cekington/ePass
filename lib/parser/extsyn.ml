@@ -31,7 +31,10 @@ and cont =
 
 type def = 
   | TypDef of string * typ
+  | ExnProcDef of string * (string * typ) list * (string * typ) list * proc
   | ProcDef of string * (string * typ) list * (string * typ) list * proc
+  | Exec of string 
+  | Fail of def 
 
 type prog = def list
 
@@ -85,12 +88,18 @@ module Print = struct
     (String.concat ~sep:" | " ks')
   | ContChannel (c, p) -> sprintf "%s => %s" c (pp_proc p)
 
-  let pp_def = function
+  let rec pp_def = function
   | TypDef (s, t) -> sprintf "type %s = %s" s (pp_typ t)
   | ProcDef (f, xs, ys, p) -> 
     let xs' = List.map ~f:(fun (s, t) -> s ^ " : " ^ (pp_typ t)) xs in 
     let ys' = List.map ~f:(fun (s, t) -> s ^ " : " ^ (pp_typ t)) ys in
       sprintf "proc %s (%s) [%s] = %s" f (String.concat ~sep:", " xs') (String.concat ~sep:", " ys') (pp_proc p)
+  | ExnProcDef (f, xs, ys, p) ->
+    let xs' = List.map ~f:(fun (s, t) -> s ^ " : " ^ (pp_typ t)) xs in 
+    let ys' = List.map ~f:(fun (s, t) -> s ^ " : " ^ (pp_typ t)) ys in
+      sprintf "exnproc %s (%s) [%s] = %s" f (String.concat ~sep:", " xs') (String.concat ~sep:", " ys') (pp_proc p)
+  | Exec p -> sprintf "exec %s" p
+  | Fail d -> sprintf "fail %s" (pp_def d)
 
   let rec pp_prog = function
   | [] -> ""

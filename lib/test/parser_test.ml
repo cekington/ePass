@@ -67,21 +67,21 @@ let%expect_test "Test parsing 5" =
 
 let%expect_test "Test parsing 6" =
   let program =
-      "proc fail (a : nat) [b : nat] = raise cancel a; cancel b"
+      "proc drop (a : nat) [b : nat] = raise cancel a; cancel b"
   in
   let ast = parse program in
   print_endline (E.Print.pp_prog ast);
-  [%expect{| proc fail (a : nat) [b : nat] = raise (cancel a; cancel b) |}]
+  [%expect{| proc drop (a : nat) [b : nat] = raise (cancel a; cancel b) |}]
 ;;
 
 let%expect_test "Test parsing 7" =
   let program =
       "proc inf (c : bool) [a : bool] = 
-      try call fail (a) [] catch send c 'false; send c ()"
+      try call drop (a) [] catch send c 'false; send c ()"
   in
   let ast = parse program in
   print_endline (E.Print.pp_prog ast);
-  [%expect{| proc inf (c : bool) [a : bool] = try (call fail (a) []) catch (send c 'false; send c ()) |}]
+  [%expect{| proc inf (c : bool) [a : bool] = try (call drop (a) []) catch (send c 'false; send c ()) |}]
 ;;
 
 let%expect_test "Test parsing 8" =
@@ -110,6 +110,19 @@ let%expect_test "Test parsing 8" =
     type store = {'ins : bin -o store & 'del : {'none : 1 + 'some : (bin * store)}}
     proc empty_queue (s : store) [] = recv s ('ins => recv s (x => cut t<-(call empty_queue (t) []); call node_queue (s) [x, t]) | 'del => send s 'none; send s ())
     proc node_queue (s : store) [x : bin, t : store] = recv s ('ins => recv s (y => cut ss<-(call node_queue (ss) [x, t]); call node_queue (s) [y, ss]) | 'del => send t 'del; recv t ('none => recv t (() => send s 'some; send s x; call empty_queue (s) []) | 'some => recv t (y => send s 'some; send s y; call node_queue (s) [x, t]))) |}]
+;;
+
+let%expect_test "Test parsing 9" =
+  let program =
+      "exec three
+       fail exnproc error (a : 1) [] = send a ()
+      "
+  in
+  let ast = parse program in
+  print_endline (E.Print.pp_prog ast);
+  [%expect{|
+    exec three
+    fail exnproc error (a : 1) [] = send a () |}]
 ;;
 
 
