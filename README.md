@@ -1,4 +1,4 @@
-# ePass
+# ePass Documentation
 ## Grammer for ePass
 ```
 <idchar> ::= [a-zA-Z_0-9']*
@@ -62,4 +62,14 @@
          | 'fail' <defn>
 
 <prog> ::= · | <defn> <prog>
+```
+
+## execute ePass
+First build the project
+```
+dune build
+```
+Create `<filename>.eps` in you repository, and run the file.
+```
+dune exec ePass <filename>.eps
 ```

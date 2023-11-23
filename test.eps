@@ -1,0 +1,5 @@
+type bool = +{'true : 1, 'false : 1}
+
+proc dropArgs (x : bool) [y : bool] =
+    cancel x;
+    cancel y
