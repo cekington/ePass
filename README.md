@@ -63,7 +63,7 @@
 <prog> ::= · | <defn> <prog>
 ```
 
-## execute ePass
+## Execute ePass
 First build the project
 ```
 dune build
@@ -72,3 +72,13 @@ Create `<filename>.eps` in you repository, and run the file.
 ```
 dune exec ePass <filename>.eps
 ```
+
+## Interpreter phrase
+### Parsing
+The Menhir parser is used to parse file input into ExternalSyntax.prog
+
+Possible errors: Parsing error
+### Elaboration
+The recursive type declaration is eliminated by introducing internal type variables.
+
+Possible errors: Type variable undecleared
