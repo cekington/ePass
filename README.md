@@ -59,7 +59,6 @@
          | 'proc' <id> '(' <annoargs> ')' '[' <annoargs> ']' '=' <proc>
          | 'exnproc' <id> '(' <annoargs> ')' '[' <annoargs> ']' '=' <proc>
          | 'exec' <id>
-         | 'fail' <defn>
 
 <prog> ::= · | <defn> <prog>
 ```

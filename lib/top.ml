@@ -1,13 +1,11 @@
 open Core
 
 module E = Extsyn
-
-let parse (s : string) : E.prog =
-  let lexbuf = Lexing.from_string s in
-    Parser.prog Lexer.read lexbuf
+module I = Intsyn
 
 let main () = 
   let filename = (Sys.get_argv()).(1) in
   let fileContent = String.concat (In_channel.read_lines filename) in
-  let prog = parse fileContent in
-  print_string(E.Print.pp_prog prog)
+  let progE : E.prog = Parse.parse fileContent in
+  let progI : I.prog = I.elab progE in
+  print_string(I.Print.pp_prog progI)

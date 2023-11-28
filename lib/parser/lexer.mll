@@ -3,9 +3,9 @@ open Parser
 }
 
 let white = [' ' '\t']+
-let idchar = ['a'-'z' 'A' - 'Z' '0'-'9' ''' '_']*
-let id = ['a' - 'z' 'A' - 'Z']idchar
-let tag = [''']idchar
+let idchar = ['a'-'z' 'A' - 'Z' '0'-'9' ''' '_']
+let id = ['a' - 'z' 'A' - 'Z']idchar*
+let tag = [''']idchar+
 
 rule read =
   parse
@@ -36,7 +36,6 @@ rule read =
   | "type" { TYPE }
   | "proc" { PROC }
   | "exnproc" { EXNPROC }
-  | "fail" { FAIL }
   | "exec" { EXEC }
   | "(" { LPAREN }
   | ")" { RPAREN }
