@@ -40,6 +40,8 @@ type def =
 
 type prog = def list
 
+val reset_counter : unit -> unit
+
 val elab : E.prog -> prog
 
 module Print : sig

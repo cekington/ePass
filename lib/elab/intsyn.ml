@@ -44,6 +44,8 @@ type prog = def list
 
 let counter = ref 0
 
+let reset_counter : unit -> unit = fun () -> counter := 0
+
 let freshName () =
   let name = "%tp_" ^ (string_of_int !counter) in
   counter := !counter + 1;
@@ -108,6 +110,19 @@ let rec find_typ (typ : typ) : prog -> string option = function
   )
   | [] -> None
 
+let rec check_no_dup_alts (l : string) : (string * E.typ) list -> unit = function 
+  | (str, _) :: alts -> 
+    if String.equal l str then failwith ("Duplicate label " ^ l) else check_no_dup_alts l alts
+  | [] -> ()
+
+let rec check_proc_declared (l : string) : E.prog -> unit = function 
+  | E.ProcDef (str, _, _, _) :: ds -> 
+    if String.equal l str then () else check_proc_declared l ds
+  | E.ExnProcDef (str, _, _, _) :: ds -> 
+    if String.equal l str then () else check_proc_declared l ds
+  | _ :: ds -> check_proc_declared l ds
+  | [] -> failwith ("Process " ^ l ^ " is not declared")
+
 let rec elab_typ (raw : E.prog) (env : prog) : E.typ -> (prog * typ) = function
   | E.Var str -> (
     let () = check_def_typ_env str env in 
@@ -135,6 +150,7 @@ let rec elab_typ (raw : E.prog) (env : prog) : E.typ -> (prog * typ) = function
 
 and elab_alts (raw : E.prog) (env : prog) : ((string * E.typ) list -> (prog * (string * string) list)) = function
   | (str, typ) :: alts -> 
+    let () = check_no_dup_alts str alts in
     let (env', typ') = name_typ raw env typ in 
     let (env'', alts') = elab_alts raw env' alts in 
     (env'', (str, typ') :: alts')
@@ -152,7 +168,6 @@ and name_typ (raw : E.prog) (env : prog) : E.typ -> (prog * string) = function
         let str = freshName () in 
         (TypDef (str, typ') :: env', str)
     )
-
 
 let elab_msg : E.msg -> msg = function
   | E.Unit -> Unit
@@ -244,7 +259,9 @@ let rec elab_prog (raw : E.prog) (env : prog) : E.prog -> prog = function
     let (env'', parms2') = elab_parms raw env' parms2 in 
     let (env''', proc') = elab_proc raw env'' proc in 
     elab_prog raw (ExnProcDef (str, parms1', parms2', proc') :: env''') ds
-  | E.Exec str :: ds -> elab_prog raw (Exec str :: env) ds
+  | E.Exec str :: ds -> 
+    let () = check_proc_declared str raw in 
+    elab_prog raw (Exec str :: env) ds
   | [] -> List.rev env
 
 let elab (raw : E.prog) : prog = elab_prog raw [] raw
@@ -317,7 +334,6 @@ module Print = struct
       let ys' = List.map ~f:(fun (c, t) -> (pp_channel c) ^ " : " ^ (pp_typ t)) ys in
         sprintf "exnproc %s (%s) [%s] = %s" f (String.concat ~sep:", " xs') (String.concat ~sep:", " ys') (pp_proc p)
     | Exec str -> sprintf "exec %s" str
-
     
   let rec pp_prog = function
     | [] -> ""

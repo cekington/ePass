@@ -77,8 +77,12 @@ dune exec ePass <filename>.eps
 ### Parsing
 The Menhir parser is used to parse file input into ExternalSyntax.prog
 
-Possible errors: Parsing error
+Possible errors: 
+- Parsing error
 ### Elaboration
 The recursive type declaration is eliminated by introducing internal type variables.
 
-Possible errors: Type variable undecleared
+Possible errors: 
+- Type variable referred undeclared
+- `exec <proc>` where `<proc>` not declared
+- Choice type declaration has duplicated branches
