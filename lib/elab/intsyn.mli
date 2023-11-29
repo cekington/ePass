@@ -10,7 +10,7 @@ type typ =
   | Plus of (string * string) list
   | With of (string * string) list
   | One 
-  | Lolli of string * string
+  | Dual of string
 
 type msg = 
   | Unit

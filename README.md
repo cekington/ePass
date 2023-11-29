@@ -86,3 +86,9 @@ Possible errors:
 - Type variable referred undeclared
 - `exec <proc>` where `<proc>` not declared
 - Choice type declaration has duplicated branches
+
+### TypeChecking 
+
+Possible errors:
+- `exec <proc>` where `<proc>` has non-empty antecedents or is exceptional
+- Process parameters have duplicated names

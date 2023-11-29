@@ -1,0 +1,1 @@
+val typecheck : Intsyn.prog -> Intsyn.prog -> unit

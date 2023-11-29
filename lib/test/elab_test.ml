@@ -58,12 +58,13 @@ let%expect_test "Test elab 3" =
   [%expect{|
     type %tp_0 = 1
     type bin = {'b0 : bin + 'b1 : bin + 'e : %tp_0}
-    type %tp_1 = bin -o store
-    type %tp_2 = bin * store
-    type %tp_3 = {'none : %tp_0 + 'some : %tp_2}
-    type store = {'ins : %tp_1 & 'del : %tp_3}
-    proc empty_queue (s : {'ins : %tp_1 & 'del : %tp_3}) [] = recv s ('ins => recv s (x => t <- (call empty_queue (t) []); call node_queue (s) [x, t]) | 'del => send s 'none; send s ())
-    proc node_queue (s : {'ins : %tp_1 & 'del : %tp_3}) [x : {'b0 : bin + 'b1 : bin + 'e : %tp_0}, t : {'ins : %tp_1 & 'del : %tp_3}] = recv s ('ins => recv s (y => ss <- (call node_queue (ss) [x, t]); call node_queue (s) [y, ss]) | 'del => send t 'del; recv t ('none => recv t (() => send s 'some; send s x; call empty_queue (s) []) | 'some => recv t (y => send s 'some; send s y; call node_queue (s) [x, t]))) |}]
+    type %tp_1 = bin^
+    type %tp_2 = %tp_1 @ store
+    type %tp_3 = bin * store
+    type %tp_4 = {'none : %tp_0 + 'some : %tp_3}
+    type store = {'ins : %tp_2 & 'del : %tp_4}
+    proc empty_queue (s : {'ins : %tp_2 & 'del : %tp_4}) [] = recv s ('ins => recv s (x => t <- (call empty_queue (t) []); call node_queue (s) [x, t]) | 'del => send s 'none; send s ())
+    proc node_queue (s : {'ins : %tp_2 & 'del : %tp_4}) [x : {'b0 : bin + 'b1 : bin + 'e : %tp_0}, t : {'ins : %tp_2 & 'del : %tp_4}] = recv s ('ins => recv s (y => ss <- (call node_queue (ss) [x, t]); call node_queue (s) [y, ss]) | 'del => send t 'del; recv t ('none => recv t (() => send s 'some; send s x; call empty_queue (s) []) | 'some => recv t (y => send s 'some; send s y; call node_queue (s) [x, t]))) |}]
 ;;
 
 let%expect_test "Test elab 4" =
@@ -74,11 +75,22 @@ let%expect_test "Test elab 4" =
     (Failure "Duplicate label 'b0") |}]
 ;;
 
-let%expect_test "Test elab 4" =
+let%expect_test "Test elab 5" =
   let program =
       "proc fwdd (x : 1) [y : 1] = fwd x y
        exec fwwd"
   in print_endline (try_elab program);
   [%expect{|
-    (Failure "Process fwwd is not declared") |}]
+    (Failure "Exec process fwwd is not declared") |}]
+;;
+
+let%expect_test "Test elab 6" =
+  let program =
+      "proc bool (x : 1) [y : 1] = fwd x y
+       type bool = +{'true : 1, 'false : 1}"
+  in print_endline (try_elab program);
+  [%expect{|
+    proc bool (x : 1) [y : 1] = fwd x y
+    type %tp_0 = 1
+    type bool = {'true : %tp_0 + 'false : %tp_0} |}]
 ;;

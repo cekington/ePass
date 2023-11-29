@@ -12,7 +12,7 @@ type typ =
   | Plus of (string * string) list
   | With of (string * string) list
   | One 
-  | Lolli of string * string
+  | Dual of string
 
 type msg = 
   | Unit
@@ -57,7 +57,7 @@ let rec expand_env (typ_var : string) : prog -> typ = function
     | TypDef (str, typ) -> if String.equal str typ_var then typ else expand_env typ_var ds
     | _ -> expand_env typ_var ds
   )
-  | [] -> failwith "Impossible"
+  | [] -> failwith "expand_env raise Impossible error"
 
 let rec is_def_typ_env (typ_var : string) : prog -> bool = function
   | d :: ds -> (
@@ -96,7 +96,7 @@ let typ_equal (typ1 : typ) (typ2 : typ) : bool =
   match (typ1, typ2) with 
   | (Tensor (t1, t2), Tensor (t1', t2')) -> (String.equal t1 t1') && (String.equal t2 t2')
   | (Par (t1, t2), Par (t1', t2')) -> (String.equal t1 t1') && (String.equal t2 t2')
-  | (Lolli (t1, t2), Lolli (t1', t2')) -> (String.equal t1 t1') && (String.equal t2 t2')
+  | (Dual str1, Dual str2) -> String.equal str1 str2
   | (One, One) -> true
   | (Plus alt1, Plus alt2) -> alt_equal alt1 alt2
   | (With alt1, With alt2) -> alt_equal alt1 alt2
@@ -115,13 +115,23 @@ let rec check_no_dup_alts (l : string) : (string * E.typ) list -> unit = functio
     if String.equal l str then failwith ("Duplicate label " ^ l) else check_no_dup_alts l alts
   | [] -> ()
 
-let rec check_proc_declared (l : string) : E.prog -> unit = function 
+let rec check_exec_proc_declared (l : string) : E.prog -> unit = function 
   | E.ProcDef (str, _, _, _) :: ds -> 
-    if String.equal l str then () else check_proc_declared l ds
+    if String.equal l str then () else check_exec_proc_declared l ds
   | E.ExnProcDef (str, _, _, _) :: ds -> 
-    if String.equal l str then () else check_proc_declared l ds
-  | _ :: ds -> check_proc_declared l ds
-  | [] -> failwith ("Process " ^ l ^ " is not declared")
+    if String.equal l str then () else check_exec_proc_declared l ds
+  | _ :: ds -> check_exec_proc_declared l ds
+  | [] -> failwith ("Exec process " ^ l ^ " is not declared")
+
+let rec check_def_twice (str : string) (category : string) : E.prog -> unit = function 
+  | E.TypDef (str', _) :: ds -> 
+    if String.equal category "type" && String.equal str str' then failwith ("Type " ^ str ^ " is defined twice") else check_def_twice str category ds
+  | E.ProcDef (str', _, _, _) :: ds -> 
+    if String.equal category "proc" && String.equal str str' then failwith ("Process " ^ str ^ " is defined twice") else check_def_twice str category ds
+  | E.ExnProcDef (str', _, _, _) :: ds -> 
+    if String.equal category "proc" && String.equal str str' then failwith ("Process " ^ str ^ " is defined twice") else check_def_twice str category ds
+  | _ :: ds -> check_def_twice str category ds
+  | [] -> ()
 
 let rec elab_typ (raw : E.prog) (env : prog) : E.typ -> (prog * typ) = function
   | E.Var str -> (
@@ -146,7 +156,8 @@ let rec elab_typ (raw : E.prog) (env : prog) : E.typ -> (prog * typ) = function
   | E.Lolli (t1, t2) -> 
     let (env1, t1') = name_typ raw env t1 in
     let (env2, t2') = name_typ raw env1 t2 in
-    (env2, Lolli (t1', t2'))
+    let dual_name = freshName () in 
+    ((TypDef (dual_name, Dual t1')) :: env2, Par (dual_name, t2'))
 
 and elab_alts (raw : E.prog) (env : prog) : ((string * E.typ) list -> (prog * (string * string) list)) = function
   | (str, typ) :: alts -> 
@@ -247,20 +258,23 @@ let rec elab_parms (raw : E.prog) (env : prog) : (string * E.typ) list -> (prog 
 
 let rec elab_prog (raw : E.prog) (env : prog) : E.prog -> prog = function
   | E.TypDef (str, typ) :: ds -> 
+    let () = check_def_twice str "type" ds in
     let (env', typ') = elab_typ raw env typ in 
     elab_prog raw (TypDef (str, typ') :: env') ds
   | E.ProcDef (str, parms1, parms2, proc) :: ds -> 
+    let () = check_def_twice str "proc" ds in
     let (env', parms1') = elab_parms raw env parms1 in 
     let (env'', parms2') = elab_parms raw env' parms2 in 
     let (env''', proc') = elab_proc raw env'' proc in 
     elab_prog raw (ProcDef (str, parms1', parms2', proc') :: env''') ds
   | E.ExnProcDef (str, parms1, parms2, proc) :: ds -> 
+    let () = check_def_twice str "proc" ds in
     let (env', parms1') = elab_parms raw env parms1 in 
     let (env'', parms2') = elab_parms raw env' parms2 in 
     let (env''', proc') = elab_proc raw env'' proc in 
     elab_prog raw (ExnProcDef (str, parms1', parms2', proc') :: env''') ds
   | E.Exec str :: ds -> 
-    let () = check_proc_declared str raw in 
+    let () = check_exec_proc_declared str raw in 
     elab_prog raw (Exec str :: env) ds
   | [] -> List.rev env
 
@@ -278,7 +292,7 @@ module Print = struct
       let alts' = List.map ~f:(fun (s, t) -> s ^ " : " ^ t) alts in 
       "{" ^ (String.concat ~sep:" & " alts') ^ "}"
     | One -> "1"
-    | Lolli (t1, t2) -> t1 ^ " -o " ^ t2
+    | Dual t -> t ^ "^" 
 
   let pp_channel : channel -> string = function
     | ChanVar str -> str
