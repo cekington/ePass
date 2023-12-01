@@ -1,5 +1,3 @@
-module E = Extsyn
-
 type channel = 
   | ChanVar of string
   | ChanConst of int 
@@ -40,9 +38,8 @@ type def =
 
 type prog = def list
 
-val reset_counter : unit -> unit
-
-val elab : E.prog -> prog
+val alt_equal : (string * string) list -> (string * string) list -> bool
+val typ_equal : typ -> typ -> bool
 
 module Print : sig
 

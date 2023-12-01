@@ -6,9 +6,9 @@ module S = Statics
 
 let try_typecheck (s : string) : string = 
   try 
-    let () = I.reset_counter () in 
+    let () = Util.reset () in 
     let ast = Parse.parse s in
-    let ist = I.elab ast in 
+    let ist = Elab.elab ast in 
     let () = S.typecheck ist ist in
     "Typecheck successful"
   with e -> 

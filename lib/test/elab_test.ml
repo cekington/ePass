@@ -5,9 +5,9 @@ open Core
 
 let try_elab (s : string) : string = 
   try 
-    let () = I.reset_counter () in 
+    let () = Util.reset () in 
     let ast = Parse.parse s in
-    let ist = I.elab ast in 
+    let ist = Elab.elab ast in 
       I.Print.pp_prog ist
   with e -> 
     Exn.to_string e
@@ -72,7 +72,7 @@ let%expect_test "Test elab 4" =
       "type bin = +{'e : 1, 'b0 : bin, 'b1 : bin, 'b0 : bin}"
   in print_endline (try_elab program);
   [%expect{|
-    (Failure "Duplicate label 'b0") |}]
+    (Failure "Type has duplicate label 'b0") |}]
 ;;
 
 let%expect_test "Test elab 5" =
@@ -93,4 +93,14 @@ let%expect_test "Test elab 6" =
     proc bool (x : 1) [y : 1] = fwd x y
     type %tp_0 = 1
     type bool = {'true : %tp_0 + 'false : %tp_0} |}]
+;;
+
+let%expect_test "Test elab 7" =
+  let program =
+      "proc bool (x : 1) [y : 1] = recv y (
+        'true => cancel x | 'false => cancel x | 'true => cancel x
+      )"
+  in print_endline (try_elab program);
+  [%expect{|
+    (Failure "Branch has duplicate label 'true") |}]
 ;;

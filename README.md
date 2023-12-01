@@ -85,7 +85,8 @@ The recursive type declaration is eliminated by introducing internal type variab
 Possible errors: 
 - Type variable referred undeclared
 - `exec <proc>` where `<proc>` not declared
-- Choice type declaration has duplicated branches
+- Choice type declaration has duplicat branches 
+- Receive contiunation has duplicate branches
 
 ### TypeChecking 
 
