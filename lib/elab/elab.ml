@@ -1,14 +1,6 @@
 module E = Extsyn 
 module I = Intsyn
 
-let rec expand_env (typ_var : string) : I.prog -> I.typ = function
-  | d :: ds -> (
-    match d with 
-    | I.TypDef (str, typ) -> if String.equal str typ_var then typ else expand_env typ_var ds
-    | _ -> expand_env typ_var ds
-  )
-  | [] -> failwith "expand_env raise Impossible error"
-
 let rec is_def_typ_env (typ_var : string) : I.prog -> bool = function
   | d :: ds -> (
     match d with 
@@ -70,7 +62,7 @@ let rec check_def_twice (str : string) (category : string) : E.prog -> unit = fu
 let rec elab_typ (raw : E.prog) (env : I.prog) : E.typ -> (I.prog * I.typ) = function
   | E.Var str -> (
     let () = check_def_typ_env str env in 
-    (env, expand_env str env)
+    (env, I.expand_env str env)
   )
   | E.Tensor (t1, t2) -> 
     let (env1, t1') = name_typ raw env t1 in

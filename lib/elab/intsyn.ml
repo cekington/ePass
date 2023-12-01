@@ -42,6 +42,15 @@ type def =
 
 type prog = def list
 
+type status = 
+  | Must          (* must be used *)
+  | May           (* may be used or passed on *)
+  | Used          (* was used *)
+
+type position = 
+  | Antecedent
+  | Succedent
+
 let alt_equal (alt1 : (string * string) list) (alt2 : (string * string) list) : bool =
   let rec contains (target : (string * string)) : (string * string) list -> bool = function
   | (t1, t2) :: ts -> (String.equal t1 (fst target)) && (String.equal t2 (snd target)) || contains target ts
@@ -63,7 +72,24 @@ let typ_equal (typ1 : typ) (typ2 : typ) : bool =
   | (With alt1, With alt2) -> alt_equal alt1 alt2
   | _ -> false
 
+let rec expand_env (typ_var : string) : prog -> typ = function
+  | d :: ds -> (
+    match d with 
+    | TypDef (str, typ) -> if String.equal str typ_var then typ else expand_env typ_var ds
+    | _ -> expand_env typ_var ds
+  )
+  | [] -> failwith "expand_env raise Impossible error"
+
 module Print = struct
+
+  let pp_position : position -> string = function
+    | Antecedent -> "antecedent"
+    | Succedent -> "succedent"
+
+  let pp_status : status -> string = function 
+    | Must -> "must"
+    | May -> "may"
+    | Used -> "used"
 
   let pp_typ : typ -> string = function
     | Tensor (t1, t2) -> t1 ^ " * " ^ t2

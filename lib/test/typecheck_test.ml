@@ -44,3 +44,54 @@ let%expect_test "Test typecheck 3" =
   in print_endline (try_typecheck program);
   [%expect{| (Failure "Exec exceptional process dropAll") |}]
 ;;
+
+let%expect_test "Test typecheck 4" =
+  let program =
+      " proc dropAll (x : 1) [] = send x ()
+      "
+  in print_endline (try_typecheck program);
+  [%expect{|
+    Typecheck successful |}]
+;;
+
+let%expect_test "Test typecheck 5" =
+  let program =
+      " proc dropAll (x : 1) [y : 1] = send y ()
+      "
+  in print_endline (try_typecheck program);
+  [%expect{|
+    (Failure
+      "In process dropAll, channel y is in antecedent, cannot send unit to it") |}]
+;;
+
+let%expect_test "Test typecheck 6" =
+  let program =
+      " proc test6 (x : 1, y : 1) [] = send x (); send y ()
+      "
+  in print_endline (try_typecheck program);
+  [%expect{|
+    (Failure
+      "In process test6, channel x is unit type, cannot have continue process") |}]
+;;
+
+let%expect_test "Test typecheck 7" =
+  let program =
+      " 
+      type bool = +{'true : 1, 'false : 1}
+      proc test7 (x : bool) [] = send x 'true
+      "
+  in print_endline (try_typecheck program);
+  [%expect{|
+    (Failure "In process test7, channel x not used") |}]
+;;
+
+let%expect_test "Test typecheck 8" =
+  let program =
+      " 
+      type bool = +{'true : 1, 'false : 1}
+      proc test8 (x : bool) [] = send x 'true; send x ()
+      "
+  in print_endline (try_typecheck program);
+  [%expect{|
+    Typecheck successful |}]
+;;

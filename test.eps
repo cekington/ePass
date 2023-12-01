@@ -1,10 +1,4 @@
 type bool = +{'true : 1, 'false : 1}
 
-type nat = +{'zero : 1, 'succ : nat}
-
-type list = +{'nil : 1, 'cons : nat * list}
-
-type triTree = +{'leaf : 1, 'node : nat * nat * nat * triTree}
-
-proc not (z : bool) [x : bool] =
-    recv x ('true => send z 'false; fwd z x | 'false => send z 'true; fwd z x)
+proc not (z : bool) [] =
+    send z 'true
