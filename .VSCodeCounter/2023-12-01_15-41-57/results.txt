@@ -1,0 +1,60 @@
+Date : 2023-12-01 15:41:57
+Directory : /Users/shengchaoyang/Desktop/ePass
+Total : 22 files,  1324 codes, 2 comments, 203 blanks, all 1529 lines
+
+Languages
++-----------------+------------+------------+------------+------------+------------+
+| language        | files      | code       | comment    | blank      | total      |
++-----------------+------------+------------+------------+------------+------------+
+| OCaml           |         11 |        891 |          1 |        126 |      1,018 |
+| Menhir          |          1 |        184 |          0 |         27 |        211 |
+| OCaml Interface |          7 |        101 |          0 |         24 |        125 |
+| Markdown        |          1 |         73 |          0 |         22 |         95 |
+| OCamllex        |          1 |         45 |          0 |          3 |         48 |
+| opam            |          1 |         30 |          1 |          1 |         32 |
++-----------------+------------+------------+------------+------------+------------+
+
+Directories
++---------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                          | files      | code       | comment    | blank      | total      |
++---------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                             |         22 |      1,324 |          2 |        203 |      1,529 |
+| . (Files)                                                     |          2 |        103 |          1 |         23 |        127 |
+| bin                                                           |          1 |          1 |          0 |          2 |          3 |
+| lib                                                           |         19 |      1,220 |          1 |        178 |      1,399 |
+| lib (Files)                                                   |          2 |         12 |          0 |          3 |         15 |
+| lib/elab                                                      |          4 |        387 |          0 |         59 |        446 |
+| lib/parser                                                    |          6 |        365 |          0 |         52 |        417 |
+| lib/statics                                                   |          2 |        136 |          1 |         21 |        158 |
+| lib/test                                                      |          3 |        311 |          0 |         39 |        350 |
+| lib/util                                                      |          2 |          9 |          0 |          4 |         13 |
++---------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++---------------------------------------------------------------+-----------------+------------+------------+------------+------------+
+| filename                                                      | language        | code       | comment    | blank      | total      |
++---------------------------------------------------------------+-----------------+------------+------------+------------+------------+
+| /Users/shengchaoyang/Desktop/ePass/README.md                  | Markdown        |         73 |          0 |         22 |         95 |
+| /Users/shengchaoyang/Desktop/ePass/bin/main.ml                | OCaml           |          1 |          0 |          2 |          3 |
+| /Users/shengchaoyang/Desktop/ePass/ePass.opam                 | opam            |         30 |          1 |          1 |         32 |
+| /Users/shengchaoyang/Desktop/ePass/lib/elab/elab.ml           | OCaml           |        189 |          0 |         19 |        208 |
+| /Users/shengchaoyang/Desktop/ePass/lib/elab/elab.mli          | OCaml Interface |          3 |          0 |          1 |          4 |
+| /Users/shengchaoyang/Desktop/ePass/lib/elab/intsyn.ml         | OCaml           |        141 |          0 |         25 |        166 |
+| /Users/shengchaoyang/Desktop/ePass/lib/elab/intsyn.mli        | OCaml Interface |         54 |          0 |         14 |         68 |
+| /Users/shengchaoyang/Desktop/ePass/lib/parser/extsyn.ml       | OCaml           |         92 |          0 |         13 |        105 |
+| /Users/shengchaoyang/Desktop/ePass/lib/parser/extsyn.mli      | OCaml Interface |         39 |          0 |          8 |         47 |
+| /Users/shengchaoyang/Desktop/ePass/lib/parser/lexer.mll       | OCamllex        |         45 |          0 |          3 |         48 |
+| /Users/shengchaoyang/Desktop/ePass/lib/parser/parse.ml        | OCaml           |          4 |          0 |          1 |          5 |
+| /Users/shengchaoyang/Desktop/ePass/lib/parser/parse.mli       | OCaml Interface |          1 |          0 |          0 |          1 |
+| /Users/shengchaoyang/Desktop/ePass/lib/parser/parser.mly      | Menhir          |        184 |          0 |         27 |        211 |
+| /Users/shengchaoyang/Desktop/ePass/lib/statics/statics.ml     | OCaml           |        135 |          1 |         21 |        157 |
+| /Users/shengchaoyang/Desktop/ePass/lib/statics/statics.mli    | OCaml Interface |          1 |          0 |          0 |          1 |
+| /Users/shengchaoyang/Desktop/ePass/lib/test/elab_test.ml      | OCaml           |         96 |          0 |         10 |        106 |
+| /Users/shengchaoyang/Desktop/ePass/lib/test/parser_test.ml    | OCaml           |        128 |          0 |         19 |        147 |
+| /Users/shengchaoyang/Desktop/ePass/lib/test/typecheck_test.ml | OCaml           |         87 |          0 |         10 |         97 |
+| /Users/shengchaoyang/Desktop/ePass/lib/top.ml                 | OCaml           |         11 |          0 |          3 |         14 |
+| /Users/shengchaoyang/Desktop/ePass/lib/top.mli                | OCaml Interface |          1 |          0 |          0 |          1 |
+| /Users/shengchaoyang/Desktop/ePass/lib/util/util.ml           | OCaml           |          7 |          0 |          3 |         10 |
+| /Users/shengchaoyang/Desktop/ePass/lib/util/util.mli          | OCaml Interface |          2 |          0 |          1 |          3 |
+| Total                                                         |                 |      1,324 |          2 |        203 |      1,529 |
++---------------------------------------------------------------+-----------------+------------+------------+------------+------------+

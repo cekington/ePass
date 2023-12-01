@@ -42,11 +42,6 @@ type def =
 
 type prog = def list
 
-type status = 
-  | Must          (* must be used *)
-  | May           (* may be used or passed on *)
-  | Used          (* was used *)
-
 type position = 
   | Antecedent
   | Succedent
@@ -85,11 +80,6 @@ module Print = struct
   let pp_position : position -> string = function
     | Antecedent -> "antecedent"
     | Succedent -> "succedent"
-
-  let pp_status : status -> string = function 
-    | Must -> "must"
-    | May -> "may"
-    | Used -> "used"
 
   let pp_typ : typ -> string = function
     | Tensor (t1, t2) -> t1 ^ " * " ^ t2

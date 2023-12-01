@@ -38,11 +38,6 @@ type def =
 
 type prog = def list
 
-type status = 
-  | Must          (* must be used *)
-  | May           (* may be used or passed on *)
-  | Used          (* was used *)
-
 type position = 
   | Antecedent
   | Succedent
@@ -55,7 +50,6 @@ val expand_env : string -> prog -> typ
 module Print : sig
 
     val pp_position : position -> string
-    val pp_status : status -> string
 
     val pp_typ : typ -> string
     val pp_channel : channel -> string
