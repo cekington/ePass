@@ -23,7 +23,7 @@ type proc =
   | Cancel of channel * proc option
   | Trycatch of proc * proc
   | Raise of proc 
-  | Cut of channel * typ option * proc * proc
+  | Cut of channel * typ * proc * proc
 
 and cont = 
   | ContUnit of proc 

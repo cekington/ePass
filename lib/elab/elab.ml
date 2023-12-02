@@ -149,13 +149,9 @@ let rec elab_proc (raw : E.prog) (env : I.prog) : E.proc -> (I.prog * I.proc) = 
     (env', I.Raise proc')
   | E.Cut (str, typ, proc1, proc2) -> 
     let (env1, proc1') = elab_proc raw env proc1 in
-    let (env2, proc2') = elab_proc raw env1 proc2 in (
-      match typ with
-      | Some t -> 
-        let (env3, t') = elab_typ raw env2 t in
-        (env3, I.Cut (I.ChanVar str, Some t', proc1', proc2'))
-      | None -> (env2, I.Cut (I.ChanVar str, None, proc1', proc2'))
-    )
+    let (env2, proc2') = elab_proc raw env1 proc2 in 
+    let (env3, t') = elab_typ raw env2 typ in
+    (env3, I.Cut (I.ChanVar str, t', proc1', proc2'))
 
 and elab_cont (raw : E.prog) (env : I.prog) : E.cont -> (I.prog * I.cont) = function
   | E.ContUnit proc -> 

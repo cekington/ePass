@@ -46,7 +46,6 @@ open Extsyn
 %type <typ> typ
 %type <(string * typ) list> altsfollow
 %type <(string * typ) list> alts
-%type <typ option> annot
 %type <proc> simpleproc
 %type <proc option> procfollow
 %type <proc> proc
@@ -97,12 +96,6 @@ alts :
     { (l, t) :: a }
   ;
 
-annot :
-  | { None }
-  | COLON; t = typ;
-    { Some t }
-  ; 
-
 procfollow :
   | { None }
   | SEMICOLON; p = proc;
@@ -136,9 +129,9 @@ proc :
     { Trycatch (p, q) }
   | RAISE; p = proc;
     { Raise p }
-  | x = ID; t = annot; SLARROW; p = simpleproc; SEMICOLON; q = proc
+  | x = ID; COLON; t = typ; SLARROW; p = simpleproc; SEMICOLON; q = proc
     { Cut (x, t, p, q) }
-  | x = ID; t = annot; SLARROW; LPAREN; p = proc; RPAREN; SEMICOLON; q = proc
+  | x = ID; COLON; t = typ; SLARROW; LPAREN; p = proc; RPAREN; SEMICOLON; q = proc
     { Cut (x, t, p, q) }
   | LPAREN; p = proc; RPAREN;
     { p }

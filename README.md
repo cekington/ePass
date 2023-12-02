@@ -1,5 +1,5 @@
 # ePass Documentation
-## Grammer for ePass
+## Grammer
 ```
 <idchar> ::= [a-zA-Z_0-9']*
 <id> ::= [a-zA-Z_]<idchar>
@@ -18,8 +18,6 @@
 
 <alts> ::= <tag> ':' <tp> <altsfollow>
 
-<annot> ::= · | ':' <tp>
-
 <procfollow> ::= · | ';' <proc>
 
 <simpleproc> ::= 'send' <id> <msg>
@@ -35,8 +33,8 @@
          | 'cancel' <id> <procfollow>
          | 'try' <proc> 'catch' <proc>
          | 'raise' <proc>
-         | <id> <annot> '<-' <simpleproc> ';' <proc>
-         | <id> <annot> '<-' '(' <proc> ')' ';' <proc>
+         | <id> ':' <tp> '<-' <simpleproc> ';' <proc>
+         | <id> ':' <tp> '<-' '(' <proc> ')' ';' <proc>
          | '(' <proc> ')'
 
 <argsfollow> ::= · | ',' <id> <argsfollow>

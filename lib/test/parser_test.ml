@@ -77,13 +77,13 @@ let%expect_test "Test parsing 8" =
       "type store = &{ 'ins : bin -o store, 'del : +{ 'none : 1, 'some : bin * store } }
       proc empty_queue (s : store) [] = 
         recv s (
-        'ins => recv s (x => t <- call empty_queue (t) []; call node_queue (s) [x, t])
+        'ins => recv s (x => t : store <- call empty_queue (t) []; call node_queue (s) [x, t])
         | 'del => send s 'none; send s ()
         )
 
       proc node_queue (s : store) [x : bin, t : store] = 
         recv s (
-          'ins => recv s (y => ss <- call node_queue (ss) [x, t]; call node_queue (s) [y, ss])
+          'ins => recv s (y => ss : store <- call node_queue (ss) [x, t]; call node_queue (s) [y, ss])
           | 'del => send t 'del; 
             recv t (
               'none => recv t (() => send s 'some; send s x; call empty_queue (s) [])
@@ -94,8 +94,8 @@ let%expect_test "Test parsing 8" =
   in print_endline (try_parse program);
   [%expect{|
     type store = {'ins : bin -o store & 'del : {'none : 1 + 'some : (bin * store)}}
-    proc empty_queue (s : store) [] = recv s ('ins => recv s (x => t <- (call empty_queue (t) []); call node_queue (s) [x, t]) | 'del => send s 'none; send s ())
-    proc node_queue (s : store) [x : bin, t : store] = recv s ('ins => recv s (y => ss <- (call node_queue (ss) [x, t]); call node_queue (s) [y, ss]) | 'del => send t 'del; recv t ('none => recv t (() => send s 'some; send s x; call empty_queue (s) []) | 'some => recv t (y => send s 'some; send s y; call node_queue (s) [x, t]))) |}]
+    proc empty_queue (s : store) [] = recv s ('ins => recv s (x => t : store <- (call empty_queue (t) []); call node_queue (s) [x, t]) | 'del => send s 'none; send s ())
+    proc node_queue (s : store) [x : bin, t : store] = recv s ('ins => recv s (y => ss : store <- (call node_queue (ss) [x, t]); call node_queue (s) [y, ss]) | 'del => send t 'del; recv t ('none => recv t (() => send s 'some; send s x; call empty_queue (s) []) | 'some => recv t (y => send s 'some; send s y; call node_queue (s) [x, t]))) |}]
 ;;
 
 let%expect_test "Test parsing 9" =
@@ -119,10 +119,10 @@ let%expect_test "Test parsing 10" =
 let%expect_test "Test parsing 11" =
   let program =
       "proc x (a : bool) [b : bool] =
-        c <- send c 'true; send a 'true; send b 'true
+        c : bool <- send c 'true; send a 'true; send b 'true
       "
   in print_endline (try_parse program);
-  [%expect{| proc x (a : bool) [b : bool] = c <- (send c 'true); send a 'true; send b 'true |}]
+  [%expect{| proc x (a : bool) [b : bool] = c : bool <- (send c 'true); send a 'true; send b 'true |}]
 ;;
 
 let%expect_test "Test parsing 12" =

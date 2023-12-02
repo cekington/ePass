@@ -27,7 +27,7 @@ type proc =
   | Cancel of channel * proc option
   | Trycatch of proc * proc
   | Raise of proc 
-  | Cut of channel * typ option * proc * proc
+  | Cut of channel * typ * proc * proc
 
 and cont = 
   | ContUnit of proc 
@@ -124,11 +124,7 @@ module Print = struct
     )
     | Trycatch (p1, p2) -> sprintf "try (%s) catch (%s)" (pp_proc p1) (pp_proc p2)
     | Raise p -> sprintf "raise (%s)" (pp_proc p)
-    | Cut (c, optt, p1, p2) -> sprintf "%s <- (%s); %s" (
-        match optt with
-        | None -> (pp_channel c)
-        | Some t -> sprintf "(%s:%s)" (pp_channel c) (pp_typ t)
-      ) (pp_proc p1) (pp_proc p2)
+    | Cut (c, t, p1, p2) -> sprintf "%s : %s <- (%s); %s" (pp_channel c) (pp_typ t) (pp_proc p1) (pp_proc p2)
 
   and pp_cont : cont -> string = function
     | ContUnit p -> sprintf "() => %s" (pp_proc p)
