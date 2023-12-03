@@ -1,4 +1,9 @@
-type bool = +{'true : 1, 'false : 1}
-
-proc not (z : bool) [] =
-    send z 'true
+type bin = +{ 'e : 1, 'b0 : bin, 'b1 : bin }
+type list = +{ 'nil : 1, 'cons : bin * list }
+    
+proc append (r : list) [l : list, k : list] =
+        recv l ('nil => recv l (() => fwd r k)
+               |'cons => recv l (x => 
+                  send r 'cons; 
+                  send r x; 
+                  call append (r) [l, k]))

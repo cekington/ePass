@@ -203,6 +203,49 @@ let%expect_test "Test typecheck 17" =
         recv x ( 'e => recv x (() => send y 'b1 ; send y 'e ; send y ())
                | 'b0 => send y 'b1 ; fwd y x
                | 'b1 => send y 'b0 ; call succ (y) [x] )
+      
+      proc pred (y : bin) [x : bin] =
+        recv x (
+          'e => send y 'e; fwd y x
+        | 'b0 => send y 'b1; call pred (y) [x]
+        | 'b1 => recv x (
+            'e => send y 'e; fwd y x 
+          | 'b0 => send y 'b0; send y 'b0; fwd y x 
+          | 'b1 => send y 'b0; send y 'b1; fwd y x 
+          )
+        )
+      "
+  in print_endline (try_typecheck program);
+  [%expect{|
+    Typecheck successful |}]
+;;
+
+let%expect_test "Test typecheck 18" =
+  let program =
+      "type bin = +{ 'e : 1, 'b0 : bin, 'b1 : bin }
+      type list = +{ 'nil : 1, 'cons : bin * list }
+      
+      proc nil (r : list) [] = send r 'nil ; send r ()
+      proc cons (r : list) [x : bin, l : list] =
+        send r 'cons; send r x; fwd r l
+      
+      proc append (r : list) [l : list, k : list] =
+        recv l ('nil => recv l (() => fwd r k)
+               |'cons => recv l (x => 
+                  send r 'cons; 
+                  send r x; 
+                  call append (r) [l, k]))
+      
+      proc reverse (r : list) [l : list] =
+        recv l (
+          'nil => send r 'nil; fwd r l
+        | 'cons => recv l (x => 
+            empty : list <- call nil (empty) [];
+            lx : list <- call cons (lx) [x, empty];
+            lrev : list <- call reverse (lrev) [l];
+            call append (r) [lrev, lx]
+          )  
+        )
       "
   in print_endline (try_typecheck program);
   [%expect{|

@@ -17,7 +17,7 @@ let rec lookup_channel (c : I.channel) : ctx -> (I.typ * ctx) option = function
       else (
         match (lookup_channel c cs) with
         | None -> None 
-        | Some (t, cs') -> Some (t, (c', t) :: cs')
+        | Some (t', cs') -> Some (t', (c', t) :: cs')
       )
   | [] -> None 
 
@@ -61,9 +61,11 @@ let rec lookup_proc (proc_name : string) (f : string) : I.prog -> (ctx * ctx * b
   | (I.Exec _) :: ps -> lookup_proc proc_name f ps
   | [] -> failwith ("In process " ^ proc_name ^ ", cannot call process " ^ f ^ " which is undefined")
 
-let check_cut_used (proc_name : string) (c : I.channel) : ctx -> unit = function 
-  | (c', _) :: _ -> if channel_equal c c' then () else failwith ("In process " ^ proc_name ^ ", cut channel " ^ (I.Print.pp_channel c) ^ " is not used") 
+let rec check_cut_used (proc_name : string) (c : I.channel) : ctx -> unit = function 
+  | (c', _) :: cs -> if channel_equal c c' then failwith ("In process " ^ proc_name ^ ", cut channel " ^ (I.Print.pp_channel c) ^ " is not used") else check_cut_used proc_name c cs
   | [] -> ()
+
+(* let pp_ctx : ctx -> string = List.fold ~init:"" ~f:(fun acc (c, t) -> acc ^ (I.Print.pp_channel c) ^ " : " ^ (I.Print.pp_typ t) ^ "\n") *)
 
 (* Gamma |- P :: Delta; Omega *)
 let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta : ctx) (omega : bool) : I.proc -> (ctx * ctx) = function
@@ -149,16 +151,16 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
             let (t', ls') = remove_alts b ls in (t', (l, t) :: ls')
           | [] -> failwith ("In process " ^ proc_name ^ ", choice type of channel " ^ (I.Print.pp_channel c) ^ " does not have label " ^ b)
         ) in
-        let rec typecheck_branches (pos : I.position) (branches : (string * I.proc) list) (alts : (string * string) list) (gamma : ctx) (delta : ctx) (omega : bool) : (ctx * ctx) = (
+        let rec typecheck_branches (pos : I.position) (branches : (string * I.proc) list) (alts : (string * string) list) (g : ctx) (d : ctx) (o : bool) : (ctx * ctx) = (
           match branches with 
           | (l, p) :: bs -> 
               let (t, alts') = remove_alts l alts in 
               let () = (
                 match pos with 
-                | I.Antecedent -> check_proc proc_name env ((c, t) :: gamma) delta omega p
-                | I.Succedent -> check_proc proc_name env gamma ((c, t) :: delta) omega p
+                | I.Antecedent -> check_proc proc_name env ((c, t) :: g) d o p
+                | I.Succedent -> check_proc proc_name env gamma ((c, t) :: d) o p
               ) in 
-              typecheck_branches pos bs alts' gamma delta omega
+              typecheck_branches pos bs alts' g d o
           | [] -> ( 
             match alts with 
             | [] -> ([], [])
@@ -179,7 +181,24 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
         )
         | _ -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is not a choice type")
       )
-      | I.ContChannel (_z, _p) -> failwith "to do"
+      | I.ContChannel (z, p) -> (
+        match tc with 
+        | I.Tensor (tc1, tc2) -> (
+          match placec with 
+          | Antecedent -> typecheck_proc proc_name env ((c, I.expand_env tc2 env) :: ((z, I.expand_env tc1 env) :: gamma')) delta' omega p
+          | Succedent -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " of tensor type is in succedent, cannot send channel " ^ (I.Print.pp_channel z) ^ " to it")
+        )
+        | I.Par (tc1, tc2) -> (
+          match placec with 
+          | Antecedent -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " of par type is in antecedent, cannot send channel " ^ (I.Print.pp_channel z) ^ " to it")
+          | Succedent -> (
+            match (I.expand_env tc1 env) with 
+            | I.Dual tc1' -> typecheck_proc proc_name env ((z, I.expand_env tc1' env) :: gamma') ((c, I.expand_env tc2 env) :: delta') omega p
+            | _ -> typecheck_proc proc_name env gamma' ((c, I.expand_env tc2 env) :: (z, I.expand_env tc1 env) :: delta') omega p
+          )
+        )
+        | _ -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is not a product type")
+     )
   )
   | I.Fwd (c1, c2) ->
     let (tc1, placec1, gamma', delta') = lookup_channel_both proc_name c1 gamma delta in
@@ -203,7 +222,7 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
       match (args, sig_args) with 
       | (c :: cs, (_, t) :: sig_cs) -> 
           let (tc, context') = lookup_channel_one proc_name c context in
-          if I.typ_equal tc t then check_args context' cs sig_cs else 
+          if I.typ_equal tc t then check_args context' cs sig_cs else
             failwith ("In process " ^ proc_name ^ ", cannot call " ^ f^ ", since arugment channel " ^ (I.Print.pp_channel c) ^ " type mismatch")
       | (_ :: _, []) -> failwith ("In process " ^ proc_name ^ ", cannot call " ^ f ^ ", since too many arguments")
       | ([], (_, _) :: _) -> failwith ("In process " ^ proc_name ^ ", cannot call " ^ f ^ ", since too few arguments")
