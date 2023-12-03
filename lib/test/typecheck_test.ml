@@ -168,3 +168,43 @@ let%expect_test "Test typecheck 14" =
     Typecheck successful |}]
 ;;
 
+
+let%expect_test "Test typecheck 15" =
+  let program =
+      "proc test15 (z : 1) [x : 1 -o 1, y : 1] = 
+          send x y; fwd z x
+      "
+  in print_endline (try_typecheck program);
+  [%expect{|
+    Typecheck successful |}]
+;;
+
+let%expect_test "Test typecheck 16" =
+  let program =
+      "type bool = +{ 'false : 1, 'true : 1 }
+      
+      proc not (c : bool) [a : bool] = 
+        recv a (
+          'false => send c 'true; fwd c a
+        | 'true => send c 'false; fwd c a
+        )
+      "
+  in print_endline (try_typecheck program);
+  [%expect{|
+    Typecheck successful |}]
+;;
+
+let%expect_test "Test typecheck 17" =
+  let program =
+      "type bin = +{ 'e : 1, 'b0 : bin, 'b1 : bin }
+      
+      proc zero (x : bin) [] = send x 'e ; send x ()
+      proc succ (y : bin) [x : bin] =
+        recv x ( 'e => recv x (() => send y 'b1 ; send y 'e ; send y ())
+               | 'b0 => send y 'b1 ; fwd y x
+               | 'b1 => send y 'b0 ; call succ (y) [x] )
+      "
+  in print_endline (try_typecheck program);
+  [%expect{|
+    Typecheck successful |}]
+;;

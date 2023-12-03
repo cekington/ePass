@@ -38,7 +38,7 @@ let rec check_no_dup_alts (l : string) : (string * E.typ) list -> unit = functio
 
 let rec check_no_dup_branches (l : string) : (string * E.proc) list -> unit = function 
   | (str, _) :: alts -> 
-    if String.equal l str then failwith ("Branch has duplicate label " ^ l) else check_no_dup_branches l alts
+    if String.equal l str then failwith ("Branches have duplicate label " ^ l) else check_no_dup_branches l alts
   | [] -> ()
 
 let rec check_exec_proc_declared (l : string) : E.prog -> unit = function 

@@ -102,5 +102,5 @@ let%expect_test "Test elab 7" =
       )"
   in print_endline (try_elab program);
   [%expect{|
-    (Failure "Branch has duplicate label 'true") |}]
+    (Failure "Branches have duplicate label 'true") |}]
 ;;
