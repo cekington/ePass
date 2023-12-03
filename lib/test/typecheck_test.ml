@@ -246,6 +246,41 @@ let%expect_test "Test typecheck 18" =
             call append (r) [lrev, lx]
           )  
         )
+
+      type iterator = &{ 'next : bin -o (bin * iterator) , 'done : 1 }
+
+      proc map (r : list) [iter : iterator, l : list] = 
+        recv l (
+          'nil => send iter 'done; 
+            recv iter (() =>  
+              send r 'nil; 
+              fwd r l
+            )
+        | 'cons => send iter 'next; 
+            recv l (x => 
+              send iter x; 
+              recv iter (xx =>
+                send r 'cons;
+                send r xx;
+                call map (r) [iter, l]
+              )
+            ) 
+        )
+      
+      proc isucc (i : iterator) [] = 
+        recv i ( 
+          'next => recv i (x => 
+            y : bin <- call succ (y) [x];
+            send i y;
+            call isucc (i) []
+          )
+        | 'done => send i ()
+        )
+
+      proc succ (y : bin) [x : bin] =
+      recv x ( 'e => recv x (() => send y 'b1 ; send y 'e ; send y ())
+              | 'b0 => send y 'b1 ; fwd y x
+              | 'b1 => send y 'b0 ; call succ (y) [x])
       "
   in print_endline (try_typecheck program);
   [%expect{|

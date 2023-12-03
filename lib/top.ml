@@ -10,4 +10,4 @@ let main () =
   let progE : E.prog = Parse.parse fileContent in
   let progI : I.prog = Elab.elab progE in
   let () = S.typecheck progI progI in 
-  print_string(I.Print.pp_prog progI)
+  print_string("typecheck successfully!")
