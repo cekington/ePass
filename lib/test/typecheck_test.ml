@@ -168,7 +168,6 @@ let%expect_test "Test typecheck 14" =
     Typecheck successful |}]
 ;;
 
-
 let%expect_test "Test typecheck 15" =
   let program =
       "proc test15 (z : 1) [x : 1 -o 1, y : 1] = 
@@ -285,4 +284,14 @@ let%expect_test "Test typecheck 18" =
   in print_endline (try_typecheck program);
   [%expect{|
     Typecheck successful |}]
+;;
+
+let%expect_test "Test typecheck 19" =
+  let program =
+      "type bool = +{'true : 1, 'false : 1}
+      exnproc test19 (x : bool) [y : bool] = 
+        raise(cancel x; cancel y)
+      "
+  in print_endline (try_typecheck program);
+  [%expect{| Typecheck successful |}]
 ;;

@@ -6,8 +6,8 @@ module S = Statics
 
 let main () = 
   let filename = (Sys.get_argv()).(1) in
-  let fileContent = String.concat (In_channel.read_lines filename) in
+  let fileContent = String.concat ~sep:"\n" (In_channel.read_lines filename) in
   let progE : E.prog = Parse.parse fileContent in
   let progI : I.prog = Elab.elab progE in
   let () = S.typecheck progI progI in 
-  print_string("typecheck successfully!")
+  print_string("typecheck successful!")

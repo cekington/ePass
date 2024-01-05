@@ -3,14 +3,15 @@ open Parser
 }
 
 let white = [' ' '\t']+
-let idchar = ['a'-'z' 'A' - 'Z' '0'-'9' ''' '_']
+let idchar = ['a'-'z' 'A'-'Z' '0'-'9' ''' '_']
 let id = ['a' - 'z' 'A' - 'Z']idchar*
 let tag = [''']idchar+
+let newline = '\r' | '\n' | "\r\n"
 
 rule read =
   parse
   | white { read lexbuf }
-  | '\n' { Lexing.new_line lexbuf; read lexbuf}
+  | newline { Lexing.new_line lexbuf; read lexbuf }
   | eof { EOF }
   | "1" { ONE }
   | "+" { PLUS }
@@ -43,5 +44,5 @@ rule read =
   | "}" { RBRACE }
   | "[" { LBRACKET }
   | "]" { RBRACKET }
-  | id as x { ID x }
-  | tag as x { TAG x }
+  | id { ID (Lexing.lexeme lexbuf) }
+  | tag { TAG (Lexing.lexeme lexbuf) }

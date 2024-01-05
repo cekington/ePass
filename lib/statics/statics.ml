@@ -282,6 +282,3 @@ let rec typecheck (env : I.prog) : I.prog -> unit = function
       let () = check_exec_proc str env in 
       typecheck env ps
   | [] -> ()
-  
-
-
