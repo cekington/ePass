@@ -18,7 +18,7 @@ type proc =
   | Send of string * msg * proc option
   | Recv of string * cont 
   | Fwd of string * string
-  | Call of string * string list * string list * proc option
+  | Call of string * string list * string list
   | Cancel of string * proc option
   | Trycatch of proc * proc
   | Raise of proc 
@@ -62,11 +62,7 @@ module Print = struct
     )
   | Recv (c, k) -> sprintf "recv %s (%s)" c (pp_cont k)
   | Fwd (c1, c2) -> sprintf "fwd %s %s" c1 c2
-  | Call (f, xs, ys, optp) -> sprintf "call %s (%s) [%s]%s" f (String.concat ~sep:", " xs) (String.concat ~sep:", " ys) (
-      match optp with
-      | None -> ""
-      | Some p -> "; " ^ pp_proc p
-    )
+  | Call (f, xs, ys) -> sprintf "call %s (%s) [%s]" f (String.concat ~sep:", " xs) (String.concat ~sep:", " ys)
   | Cancel (c, optp) -> sprintf "cancel %s%s" c (
       match optp with
       | None -> ""

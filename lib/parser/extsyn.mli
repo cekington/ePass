@@ -16,7 +16,7 @@ type proc =
   | Send of string * msg * proc option
   | Recv of string * cont 
   | Fwd of string * string
-  | Call of string * string list * string list * proc option
+  | Call of string * string list * string list
   | Cancel of string * proc option
   | Trycatch of proc * proc
   | Raise of proc 

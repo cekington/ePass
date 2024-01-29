@@ -19,11 +19,12 @@ type proc =
   | Send of channel * msg * proc option
   | Recv of channel * cont 
   | Fwd of channel * channel
-  | Call of string * channel list * channel list * proc option
+  | Call of string * channel list * channel list
   | Cancel of channel * proc option
   | Trycatch of proc * proc
   | Raise of proc 
   | Cut of channel * typ * proc * proc
+  | Null
 
 and cont = 
   | ContUnit of proc 
@@ -44,8 +45,12 @@ type position =
 
 val alt_equal : (string * string) list -> (string * string) list -> bool
 val typ_equal : typ -> typ -> bool
+val channel_equal : channel -> channel -> bool
 
 val expand_env : string -> prog -> typ
+
+val find_proc : prog -> string -> def
+val subst_proc : (channel * channel) list -> proc -> proc
 
 module Print : sig
 

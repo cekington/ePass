@@ -209,28 +209,24 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
       | (_, _, true) -> failwith ("In process " ^ proc_name ^ ", cannot forward channel " ^ (I.Print.pp_channel c1) ^ " and channel " ^ (I.Print.pp_channel c2) ^ " , they are either both antecedent or both succedent")
       | (_, _, false) -> failwith ("In process " ^ proc_name ^ ", cannot forward channel " ^ (I.Print.pp_channel c1) ^ " and channel " ^ (I.Print.pp_channel c2) ^ " , they are not of the same type")
     )
-  | I.Call (f, dargs, gargs, p) -> 
+  | I.Call (f, dargs, gargs) -> 
     let (sig_dargs, sig_gargs, is_exn) = lookup_proc proc_name f env in 
-    let omega' = (
+    let () = (
       match (is_exn, omega) with 
-      | (true, true) -> false 
       | (true, false) -> failwith ("In process " ^ proc_name ^ ", cannot call exceptional process " ^ f ^ " without exceptional channel")
-      | (false, true) -> true
-      | (false, false) -> false
+      | _ -> ()
     ) in 
     let rec check_args (context : ctx) (args : I.channel list) (sig_args : ctx) : ctx = (
       match (args, sig_args) with 
       | (c :: cs, (_, t) :: sig_cs) -> 
           let (tc, context') = lookup_channel_one proc_name c context in
           if I.typ_equal tc t then check_args context' cs sig_cs else
-            failwith ("In process " ^ proc_name ^ ", cannot call " ^ f^ ", since arugment channel " ^ (I.Print.pp_channel c) ^ " type mismatch")
-      | (_ :: _, []) -> failwith ("In process " ^ proc_name ^ ", cannot call " ^ f ^ ", since too many arguments")
-      | ([], (_, _) :: _) -> failwith ("In process " ^ proc_name ^ ", cannot call " ^ f ^ ", since too few arguments")
+            failwith ("In process " ^ proc_name ^ ", cannot call " ^ f ^ ", since arugment channel " ^ (I.Print.pp_channel c) ^ " has a different type")
+      | (_ :: _, []) -> failwith ("In process " ^ proc_name ^ ", cannot call " ^ f ^ ", too many arguments")
+      | ([], (_, _) :: _) -> failwith ("In process " ^ proc_name ^ ", cannot call " ^ f ^ ", too few arguments")
       | ([], []) -> context
     ) in 
-    let delta' = check_args delta dargs sig_dargs in 
-    let gamma' = check_args gamma gargs sig_gargs in
-    typecheck_optional_proc proc_name env gamma' delta' omega' p
+    (check_args delta dargs sig_dargs, check_args gamma gargs sig_gargs)
   | I.Cancel (c, p) -> 
     let (_, _, gamma', delta') = lookup_channel_both proc_name c gamma delta in
     typecheck_optional_proc proc_name env gamma' delta' omega p
@@ -244,6 +240,7 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
     let (gamma', delta') = typecheck_proc proc_name env gamma ((c, t) :: delta) omega p in
     let () = check_cut_used proc_name c delta' in
     typecheck_proc proc_name env ((c, t) :: gamma') delta' omega q
+  | I.Null -> failwith ("In typechecking, there is no null process")
 
 and typecheck_optional_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta : ctx) (omega : bool) : I.proc option -> (ctx * ctx) = function 
   | Some p -> typecheck_proc proc_name env gamma delta omega p

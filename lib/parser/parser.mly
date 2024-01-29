@@ -110,7 +110,7 @@ simpleproc :
   | FWD; a = ID; b = ID;
     { Fwd (a, b) }
   | CALL; p = ID; LPAREN; provides = args; RPAREN; LBRACKET; uses = args; RBRACKET;
-    { Call (p, provides, uses, None) }
+    { Call (p, provides, uses) }
   | CANCEL; a = ID;
     { Cancel (a, None) }
 
@@ -121,8 +121,8 @@ proc :
     { Recv (a, c) }
   | FWD; a = ID; b = ID;
     { Fwd (a, b) }
-  | CALL; p = ID; LPAREN; provides = args; RPAREN; LBRACKET; uses = args; RBRACKET; pf = procfollow;
-    { Call (p, provides, uses, pf) }
+  | CALL; p = ID; LPAREN; provides = args; RPAREN; LBRACKET; uses = args; RBRACKET;
+    { Call (p, provides, uses) }
   | CANCEL; a = ID; pf = procfollow;
     { Cancel (a, pf) }
   | TRY; p = proc; CATCH; q = proc;

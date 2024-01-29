@@ -124,15 +124,10 @@ let rec elab_proc (raw : E.prog) (env : I.prog) : E.proc -> (I.prog * I.proc) = 
     let (env', cont') = elab_cont raw env cont in 
     (env', I.Recv (I.ChanVar str, cont'))
   | E.Fwd (str1, str2) -> (env, I.Fwd (I.ChanVar str1, I.ChanVar str2))
-  | E.Call (str, chans1, chans2, proc) -> 
+  | E.Call (str, chans1, chans2) -> 
     let chans1' = List.map (fun str -> (I.ChanVar str)) chans1 in
-    let chans2' = List.map (fun str -> (I.ChanVar str)) chans2 in (
-      match proc with
-        | Some p -> 
-          let (env', proc') = elab_proc raw env p in
-          (env', I.Call (str, chans1', chans2', Some proc'))
-        | None -> (env, I.Call (str, chans1', chans2', None))
-    )
+    let chans2' = List.map (fun str -> (I.ChanVar str)) chans2 in 
+    (env, I.Call (str, chans1', chans2'))
   | E.Cancel (str, proc) -> (
       match proc with 
       | Some p -> 

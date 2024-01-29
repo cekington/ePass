@@ -29,7 +29,7 @@
 <proc> ::= 'send' <id> <msg> <procfollow>
          | 'recv' <id> '(' <cont> ')'
          | 'fwd' <id> <id>
-         | 'call' <id> '(' <args> ')' '[' <args> ']' <procfollow>
+         | 'call' <id> '(' <args> ')' '[' <args> ']'
          | 'cancel' <id> <procfollow>
          | 'try' <proc> 'catch' <proc>
          | 'raise' <proc>
