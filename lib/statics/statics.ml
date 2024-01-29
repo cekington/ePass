@@ -263,8 +263,8 @@ let rec check_exec_proc (str : string) : I.prog -> unit = function
       if String.equal s str then 
         failwith ("Exec exceptional process " ^ str)
       else check_exec_proc str ps
-  | (I.Exec str) :: ps -> check_exec_proc str ps
-  | [] -> failwith "check_exec_proc raise Impossible error"
+  | (I.Exec _) :: ps -> check_exec_proc str ps
+  | [] -> failwith ("Exec process " ^ str ^ " which is undefined")
 
 let rec typecheck (env : I.prog) : I.prog -> unit = function 
   | (I.TypDef (_, _)) :: ps -> typecheck env ps

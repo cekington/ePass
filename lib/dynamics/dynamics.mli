@@ -1,1 +1,1 @@
-val exec : Intsyn.prog -> unit
+val exec : Intsyn.prog -> string

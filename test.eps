@@ -1,12 +1,4 @@
-type bin = +{ 'e : 1, 'b0 : bin, 'b1 : bin }
+proc silent (x : 1) [] =
+  y : 1 <- cancel y; fwd x y
 
-proc zero (z:bin) [] = send z 'e; send z ()
-
-proc succ (y:bin) [x:bin] = fwd y x
-
-proc three (n3 : bin) [] = send n3 'b1 ; send n3 'b1 ; send n3 'e ; send n3 ()
-
-proc four (n4 : bin) [] = n3 : bin <- call three (n3) []; call succ (n4) [n3]
-
-exec three
-exec four
+exec silent

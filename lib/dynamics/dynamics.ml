@@ -21,7 +21,7 @@ let pp_config (cfg : config) : string =
     | [] -> ""
     | (p, c) :: ps -> "(" ^ I.Print.pp_proc p ^ ") with exception channal: " ^ pp_option I.Print.pp_channel c ^ "\n" ^ pp_procs ps
   in 
-  "-----Configuration----\nnum: " ^ string_of_int num ^ "\n" ^ "procs:\n" ^ pp_procs ps ^ "cancelled: {" ^ Iset.fold (fun i s -> string_of_int i ^ " " ^ s) cancelled "}"
+  "num: " ^ string_of_int num ^ "\n" ^ "procs:\n" ^ pp_procs ps ^ "cancelled: {" ^ Iset.fold (fun i s ->  I.Print.pp_channel (I.ChanConst i) ^ (if i = 1 then "" else " ") ^ s) cancelled "}"
 
 let pp_frontier (frontier : (I.channel * int) list) : string = 
   let rec pp_frontiers (frontier : (I.channel * int) list) : string = 
@@ -144,7 +144,7 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
       | _ -> failwith "step_par recv case raise Impossible error"
     )
     | I.Fwd (c, c') -> (
-      match split_config c [] ps with
+      match split_config c' [] ps with
       | Some (ps1rev, anyP, raise_anyP, ps2) -> (
         step_par env true ((List.rev ps1rev) @ ps2, cancelled, num) ((I.Null, raise_p) :: (I.subst_proc [(c, c')] anyP, raise_anyP) :: viewed)
       )
@@ -153,10 +153,10 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
     | I.Call (f, chans1, chans2) -> (
       match I.find_proc env f with
       | I.ProcDef (_, delta, gamma, fp) -> (
-          let subst1 = zip chans1 (List.map (fun (x, _) -> x) delta) in
-          let subst2 = zip chans2 (List.map (fun (x, _) -> x) gamma) in
-          let fp' = I.subst_proc (subst1 @ subst2) fp in
-          step_par env true (ps, cancelled, num) ((fp', raise_p) :: viewed)
+        let subst1 = zip chans1 (List.map (fun (x, _) -> x) delta) in
+        let subst2 = zip chans2 (List.map (fun (x, _) -> x) gamma) in
+        let fp' = I.subst_proc (subst1 @ subst2) fp in
+        step_par env true (ps, cancelled, num) ((fp', raise_p) :: viewed)
       )
       | I.ExnProcDef (_, delta, gamma, fp) -> (
         let subst1 = zip chans1 (List.map (fun (x, _) -> x) delta) in
@@ -166,11 +166,8 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
       )
       | _ -> failwith "step_par call case raise Impossible error"
     )
-    | I.Cancel (c, optp) -> (
-      match optp with 
-      | Some p' -> step_par env true (ps, cancelled, num) ((p', raise_p) :: viewed)
-      | None -> (true, ((I.Null, raise_p) :: ps, add_set cancelled c, num))
-    )
+    | I.Cancel (c, optp) -> 
+      step_par env true (ps, add_set cancelled c, num) (((match optp with | Some p' -> p' | None -> I.Null), raise_p) :: viewed)
     | I.Trycatch (p1, p2) -> (
       let handleChan = I.ChanConst num in
       let handleActProc = I.Recv (handleChan, I.ContUnit p2) in
@@ -196,9 +193,9 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
   | [] -> (changed, (List.rev viewed, cancelled, num))
 
 let rec iterate (env : I.prog) (cfg : config) : config = 
-  let () = print_debug print_string ("Config before:\n" ^ pp_config cfg ^ "\n") in
+  let () = print_debug print_string ("-----Config Before-----\n" ^ pp_config cfg ^ "\n") in
   let (changed, cfg') = step_par env false cfg [] in
-  let () = print_debug print_string ("config after:\n" ^ pp_config cfg' ^ "\n") in 
+  let () = print_debug print_string ("-----Config After " ^ (if changed then "(changed)" else "(unchanged)") ^ "-----\n" ^ pp_config cfg' ^ "\n") in 
   if changed then iterate env cfg' else cfg'
 
 let rec init (num : int) (depth : int): (I.channel * I.typ) list -> (int * (I.channel * I.channel) list * (I.channel * int) list) = function 
@@ -217,6 +214,7 @@ and next (env : I.prog) (depchannel : I.channel * int) (frontiers : (I.channel *
   match depchannel with 
   | (_, 0) -> "\n reach maximum depth\n" ^ observe_frontier env frontiers cfg 
   | (c, depth) -> 
+    let () = print_debug print_string ("Focus channel " ^ I.Print.pp_channel c ^ " at depth " ^ string_of_int depth ^ "\n") in
     observe env (c, depth) frontiers (iterate env cfg)
 
 and observe (env : I.prog) (depchannel : I.channel * int) (frontiers : (I.channel * int) list) (cfg : config) : string = 
@@ -248,7 +246,7 @@ and observe (env : I.prog) (depchannel : I.channel * int) (frontiers : (I.channe
           (next env (c, depth-1) frontiers (new_procobj :: (List.rev_append ps1rev ps2), cancelled, num))
         | I.Channel c' -> 
           I.Print.pp_msg msg ^ "." ^ 
-          (next env (c', depth - 1) ((c', depth - 1) :: frontiers) (new_procobj :: (List.rev_append ps1rev ps2), cancelled, num))
+          (next env (c, depth - 1) ((c', depth - 1) :: frontiers) (new_procobj :: (List.rev_append ps1rev ps2), cancelled, num))
       )
     | _ -> failwith "observe raise Impossible error"
   )
@@ -264,12 +262,10 @@ let exec_one (env : I.prog) (proc_name : string) : string = (
   | _ -> failwith "exec raise Impossible error"
 ) 
 
-let rec exec_helper (env : I.prog) : I.prog -> unit = function 
-  | [] -> ()
+let rec exec_helper (env : I.prog) : I.prog -> string = function 
+  | [] -> ""
   | (I.Exec f) :: envs -> 
-    let () = print_string ("Executing process " ^ f ^ ":\n") in
-    let () = print_string (exec_one env f ^ "\n") in 
-    exec_helper env envs
+    "Executing process " ^ f ^ ":\n" ^ (exec_one env f ^ "\n") ^ exec_helper env envs
   | _ :: envs -> exec_helper env envs 
 
-let exec (env : I.prog) : unit = exec_helper env env
+let exec (env : I.prog) : string = exec_helper env env
