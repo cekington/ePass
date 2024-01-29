@@ -71,7 +71,7 @@ let typ_equal (typ1 : typ) (typ2 : typ) : bool =
 let channel_equal (c1 : channel) (c2 : channel) : bool =
   match (c1, c2) with 
   | (ChanVar str1, ChanVar str2) -> String.equal str1 str2
-  | (ChanConst i1, ChanConst i2) -> Int.equal i1 i2
+  | (ChanConst i1, ChanConst i2) -> i1 = i2
   | _ -> false
 
 let rec expand_env (typ_var : string) : prog -> typ = function
@@ -82,15 +82,13 @@ let rec expand_env (typ_var : string) : prog -> typ = function
   )
   | [] -> failwith "expand_env raise Impossible error"
 
-let find_proc (env : prog) (proc_name : string) : def =
-  let result = List.find ~f:(function 
-    | ProcDef (f, _, _, _) -> String.equal f proc_name
-    | ExnProcDef (f, _, _, _) -> String.equal f proc_name
-    | _ -> false
-  ) env in 
-  match result with
-  | Some def -> def
-  | None -> failwith "find_proc raise Impossible error"
+let rec find_proc (env : prog) (proc_name : string) : def = match env with 
+  | [] -> failwith "find_proc raise Impossible error"
+  | (ProcDef (f, d, g, p)) :: envs -> 
+    if String.equal f proc_name then ProcDef (f, d, g, p) else find_proc envs proc_name
+  | (ExnProcDef (f, d, g, p)) :: envs -> 
+    if String.equal f proc_name then ExnProcDef (f, d, g, p) else find_proc envs proc_name
+  | _ :: envs -> find_proc envs proc_name
 
 let rec subst_channel (gamma : (channel * channel) list) (c : channel) : channel = 
   match gamma with 

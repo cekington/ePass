@@ -5,18 +5,31 @@ module Iset = Set.Make(Int)
 type procobj = I.proc * I.channel option
 type config = procobj list * Iset.t * int
 
+let debug = false
+
+let print_debug (f : 'a -> unit) (x : 'a) : unit =
+  if debug then f x else ()
+
 let pp_option (pp : 'a -> string) : 'a option -> string = function 
-  | None -> "None"
-  | Some x -> "Some " ^ pp x
+  | None -> "_"
+  | Some x -> pp x
 
 let pp_config (cfg : config) : string = 
   let (ps, cancelled, num) = cfg in 
   let rec pp_procs (ps : (I.proc * I.channel option) list) : string = 
     match ps with 
     | [] -> ""
-    | (p, c) :: ps -> I.Print.pp_proc p ^ ", " ^ pp_option I.Print.pp_channel c ^ "\n" ^ pp_procs ps
+    | (p, c) :: ps -> "(" ^ I.Print.pp_proc p ^ ") with exception channal: " ^ pp_option I.Print.pp_channel c ^ "\n" ^ pp_procs ps
   in 
-  "num: " ^ string_of_int num ^ "\n" ^ pp_procs ps ^ "\n" ^ "cancelled: " ^ Iset.fold (fun i s -> string_of_int i ^ " " ^ s) cancelled ""
+  "-----Configuration----\nnum: " ^ string_of_int num ^ "\n" ^ "procs:\n" ^ pp_procs ps ^ "cancelled: {" ^ Iset.fold (fun i s -> string_of_int i ^ " " ^ s) cancelled "}"
+
+let pp_frontier (frontier : (I.channel * int) list) : string = 
+  let rec pp_frontiers (frontier : (I.channel * int) list) : string = 
+    match frontier with 
+    | [] -> ""
+    | (c, depth) :: frontiers -> "(" ^ I.Print.pp_channel c ^ ", " ^ string_of_int depth ^ ")\n" ^ pp_frontiers frontiers
+  in 
+  "frontier:\n" ^ pp_frontiers frontier
 
 let rec zip (l1 : 'a list) (l2 : 'b list) : ('a * 'b) list = 
   match (l1, l2) with 
@@ -94,10 +107,10 @@ let reduce (msg : I.msg) (k : I.cont) : I.proc =
 
 let rec split_config (c : I.channel) (c1rev : procobj list) : procobj list -> (procobj list * I.proc * I.channel option * procobj list) option = function 
   | [] -> None 
-  | (I.Send (c', msg, p), raise_c) :: c2 -> 
+  | (I.Send (c', msg, optp), raise_c) :: c2 -> 
     if I.channel_equal c c' 
-      then Some (c1rev, I.Send (c', msg, p), raise_c, c2)
-    else split_config c ((I.Send (c', msg, p), raise_c) :: c1rev) c2
+      then Some (c1rev, I.Send (c', msg, optp), raise_c, c2)
+    else split_config c ((I.Send (c', msg, optp), raise_c) :: c1rev) c2
   | (I.Recv (c', k), raise_c) :: c2 ->
     if I.channel_equal c c' 
       then Some (c1rev, I.Recv (c', k), raise_c, c2)
@@ -111,7 +124,7 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
   | (p, raise_p) :: ps -> (
     match p with
     | I.Send (c, msg, optp) -> (
-      match split_config c ps [] with
+      match split_config c [] ps with
       | Some (ps1rev, I.Recv (_, k), raise_r, ps2) -> (
         let reduced_procobj = (reduce msg k, raise_r) in 
         step_par env true ((List.rev ps1rev) @ ps2, cancelled, num) 
@@ -121,7 +134,7 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
       | _ -> failwith "step_par send case raise Impossible error"
     )
     | I.Recv (c, k) -> (
-      match split_config c ps [] with
+      match split_config c [] ps with
       | Some (ps1rev, I.Send (_, msg, optp), raise_s, ps2) -> (
         let reduced_procobj = (reduce msg k, raise_p) in 
         step_par env true ((List.rev ps1rev) @ ps2, cancelled, num) 
@@ -131,7 +144,7 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
       | _ -> failwith "step_par recv case raise Impossible error"
     )
     | I.Fwd (c, c') -> (
-      match split_config c ps [] with
+      match split_config c [] ps with
       | Some (ps1rev, anyP, raise_anyP, ps2) -> (
         step_par env true ((List.rev ps1rev) @ ps2, cancelled, num) ((I.Null, raise_p) :: (I.subst_proc [(c, c')] anyP, raise_anyP) :: viewed)
       )
@@ -180,12 +193,12 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
     | I.Null -> 
       step_par env true (ps, cancelled, num) (test_need_silent viewed raise_p)
   )
-  | [] -> (changed, cfg)
+  | [] -> (changed, (List.rev viewed, cancelled, num))
 
 let rec iterate (env : I.prog) (cfg : config) : config = 
-  let () = print_string ("config before:" ^ pp_config cfg ^ "\n") in
+  let () = print_debug print_string ("Config before:\n" ^ pp_config cfg ^ "\n") in
   let (changed, cfg') = step_par env false cfg [] in
-  let () = print_string ("config after:" ^ pp_config cfg' ^ "\n") in 
+  let () = print_debug print_string ("config after:\n" ^ pp_config cfg' ^ "\n") in 
   if changed then iterate env cfg' else cfg'
 
 let rec init (num : int) (depth : int): (I.channel * I.typ) list -> (int * (I.channel * I.channel) list * (I.channel * int) list) = function 
@@ -208,8 +221,9 @@ and next (env : I.prog) (depchannel : I.channel * int) (frontiers : (I.channel *
 
 and observe (env : I.prog) (depchannel : I.channel * int) (frontiers : (I.channel * int) list) (cfg : config) : string = 
   let (c, depth) = depchannel in 
+  let () = print_debug print_string ("Observing channel " ^ I.Print.pp_channel c ^ " at depth " ^ string_of_int depth ^ "\n") in
   let (ps, cancelled, num) = cfg in (
-    match split_config c ps [] with 
+    match split_config c [] ps with 
     | Some (ps1rev, I.Recv (_, k), raise_p, ps2) -> 
       if in_set cancelled c  
       then 
@@ -245,14 +259,17 @@ let exec_one (env : I.prog) (proc_name : string) : string = (
     let depth = -1 in 
     let (num, substs, frontier) = init 0 depth delta in 
     let p' = I.subst_proc substs p in
+    let () = print_debug print_string (pp_frontier frontier) in
     observe_frontier env frontier ([(p', None)], Iset.empty, num)
   | _ -> failwith "exec raise Impossible error"
 ) 
 
-let rec exec (env : I.prog) : unit = 
-  match env with
+let rec exec_helper (env : I.prog) : I.prog -> unit = function 
   | [] -> ()
   | (I.Exec f) :: envs -> 
-    let () = print_string ("Executing process " ^ f ^ ":\n" ^ exec_one env f ^ "\n") in 
-    exec envs
-  | _ :: envs -> exec envs 
+    let () = print_string ("Executing process " ^ f ^ ":\n") in
+    let () = print_string (exec_one env f ^ "\n") in 
+    exec_helper env envs
+  | _ :: envs -> exec_helper env envs 
+
+let exec (env : I.prog) : unit = exec_helper env env

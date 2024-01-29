@@ -4,6 +4,9 @@ module I = Intsyn
 
 type ctx = (I.channel * I.typ) list
 
+let _pp_ctx (ctx : ctx) : string = 
+  List.fold ~init:"" ~f:(fun acc (c, t) -> acc ^ (I.Print.pp_channel c) ^ " : " ^ (I.Print.pp_typ t) ^ "\n") ctx
+
 let channel_equal (c1 : I.channel) (c2 : I.channel) : bool =
   match (c1, c2) with
   | (I.ChanVar str1, I.ChanVar str2) -> String.equal str1 str2
@@ -64,8 +67,6 @@ let rec lookup_proc (proc_name : string) (f : string) : I.prog -> (ctx * ctx * b
 let rec check_cut_used (proc_name : string) (c : I.channel) : ctx -> unit = function 
   | (c', _) :: cs -> if channel_equal c c' then failwith ("In process " ^ proc_name ^ ", cut channel " ^ (I.Print.pp_channel c) ^ " is not used") else check_cut_used proc_name c cs
   | [] -> ()
-
-(* let pp_ctx : ctx -> string = List.fold ~init:"" ~f:(fun acc (c, t) -> acc ^ (I.Print.pp_channel c) ^ " : " ^ (I.Print.pp_typ t) ^ "\n") *)
 
 (* Gamma |- P :: Delta; Omega *)
 let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta : ctx) (omega : bool) : I.proc -> (ctx * ctx) = function
@@ -226,7 +227,7 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
       | ([], (_, _) :: _) -> failwith ("In process " ^ proc_name ^ ", cannot call " ^ f ^ ", too few arguments")
       | ([], []) -> context
     ) in 
-    (check_args delta dargs sig_dargs, check_args gamma gargs sig_gargs)
+    (check_args gamma gargs sig_gargs, check_args delta dargs sig_dargs)
   | I.Cancel (c, p) -> 
     let (_, _, gamma', delta') = lookup_channel_both proc_name c gamma delta in
     typecheck_optional_proc proc_name env gamma' delta' omega p
