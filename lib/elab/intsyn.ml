@@ -164,7 +164,7 @@ module Print = struct
     | Trycatch (p1, p2) -> sprintf "try (%s) catch (%s)" (pp_proc p1) (pp_proc p2)
     | Raise p -> sprintf "raise (%s)" (pp_proc p)
     | Cut (c, t, p1, p2) -> sprintf "%s : %s <- (%s); %s" (pp_channel c) (pp_typ t) (pp_proc p1) (pp_proc p2)
-    | Null -> " "
+    | Null -> ""
 
   and pp_cont : cont -> string = function
     | ContUnit p -> sprintf "() => %s" (pp_proc p)

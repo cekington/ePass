@@ -115,6 +115,10 @@ let rec split_config (c : I.channel) (c1rev : procobj list) : procobj list -> (p
     if I.channel_equal c c' 
       then Some (c1rev, I.Recv (c', k), raise_c, c2)
     else split_config c ((I.Recv (c', k), raise_c) :: c1rev) c2
+  | (I.Fwd (c', c''), raise_c) :: c2 ->
+    if I.channel_equal c c' 
+      then Some (c1rev, I.Fwd (c', c''), raise_c, c2)
+    else split_config c ((I.Fwd (c', c''), raise_c) :: c1rev) c2
   | p :: c2 -> 
     split_config c (p :: c1rev) c2
 
@@ -193,9 +197,8 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
   | [] -> (changed, (List.rev viewed, cancelled, num))
 
 let rec iterate (env : I.prog) (cfg : config) : config = 
-  let () = print_debug print_string ("-----Config Before-----\n" ^ pp_config cfg ^ "\n") in
   let (changed, cfg') = step_par env false cfg [] in
-  let () = print_debug print_string ("-----Config After " ^ (if changed then "(changed)" else "(unchanged)") ^ "-----\n" ^ pp_config cfg' ^ "\n") in 
+  let () = print_debug print_string ("-----Config " ^ (if changed then "(changed)" else "(unchanged)") ^ "-----\n" ^ pp_config cfg' ^ "\n") in 
   if changed then iterate env cfg' else cfg'
 
 let rec init (num : int) (depth : int): (I.channel * I.typ) list -> (int * (I.channel * I.channel) list * (I.channel * int) list) = function 
@@ -215,6 +218,7 @@ and next (env : I.prog) (depchannel : I.channel * int) (frontiers : (I.channel *
   | (_, 0) -> "\n reach maximum depth\n" ^ observe_frontier env frontiers cfg 
   | (c, depth) -> 
     let () = print_debug print_string ("Focus channel " ^ I.Print.pp_channel c ^ " at depth " ^ string_of_int depth ^ "\n") in
+    let () = print_debug print_string ("-----Config-----\n" ^ pp_config cfg ^ "\n") in
     observe env (c, depth) frontiers (iterate env cfg)
 
 and observe (env : I.prog) (depchannel : I.channel * int) (frontiers : (I.channel * int) list) (cfg : config) : string = 
@@ -248,6 +252,26 @@ and observe (env : I.prog) (depchannel : I.channel * int) (frontiers : (I.channe
           I.Print.pp_msg msg ^ "." ^ 
           (next env (c, depth - 1) ((c', depth - 1) :: frontiers) (new_procobj :: (List.rev_append ps1rev ps2), cancelled, num))
       )
+    | Some (ps1rev, I.Fwd (_, c'), raise_p, ps2) -> 
+      let new_procobj : procobj = (I.Null, raise_p) in
+      if in_set cancelled c
+      then 
+        "Channel " ^ I.Print.pp_channel c ^ " is cancelled.\n" ^
+        (observe_frontier env frontiers (new_procobj :: (List.rev_append ps1rev ps2), add_set cancelled c', num))
+      else
+        if in_set cancelled c' 
+        then 
+          "Channel " ^ I.Print.pp_channel c ^ " is cancelled.\n" ^
+          (observe_frontier env frontiers (new_procobj :: (List.rev_append ps1rev ps2), add_set cancelled c, num))
+        else 
+          failwith "observe raise Impossible error"
+    | None -> 
+      if in_set cancelled c 
+      then
+        "Channel " ^ I.Print.pp_channel c ^ " is cancelled.\n" ^ 
+        (observe_frontier env frontiers (ps, cancelled, num))
+      else 
+        failwith "observe raise Impossible error"
     | _ -> failwith "observe raise Impossible error"
   )
 
