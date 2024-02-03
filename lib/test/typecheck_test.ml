@@ -70,8 +70,7 @@ let%expect_test "Test typecheck 6" =
       "
   in print_endline (try_typecheck program);
   [%expect{|
-    (Failure
-      "In process test6, channel x is unit type, cannot have continue process") |}]
+    Typecheck successful |}]
 ;;
 
 let%expect_test "Test typecheck 7" =

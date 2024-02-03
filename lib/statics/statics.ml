@@ -77,11 +77,7 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
       match placec with
       | I.Antecedent -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is in antecedent, cannot send unit to it")
       | I.Succedent -> 
-          if I.typ_equal tc I.One then (
-            match p with 
-            | None -> (gamma', delta')
-            | Some _ -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is unit type, cannot have continue process")
-          )
+          if I.typ_equal tc I.One then typecheck_optional_proc proc_name env gamma' delta' omega p
           else failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is not unit type")
     )
     | Label l -> (
