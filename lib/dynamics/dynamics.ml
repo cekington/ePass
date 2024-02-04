@@ -8,8 +8,7 @@ type config = procobj list * Iset.t * int
 module IntHashtbl = Hashtbl.Make(Int)
 
 let msgSeq : (string list) IntHashtbl.t = IntHashtbl.create 1
-
-let debug = false
+let debug = true
 
 let rec subst_config (subst : (I.channel * I.channel) list) : procobj list -> procobj list = function 
   | [] -> []
@@ -45,7 +44,7 @@ let pp_config (cfg : config) : string =
     | [] -> ""
     | (p, c) :: ps -> "(" ^ I.Print.pp_proc p ^ ") with exception channal: " ^ pp_option I.Print.pp_channel c ^ "\n" ^ pp_procs ps
   in 
-  "num: " ^ string_of_int num ^ "\n" ^ "procs:\n" ^ pp_procs ps ^ "cancelled: {" ^ Iset.fold (fun i s ->  I.Print.pp_channel (I.ChanConst i) ^ (if i = 1 then "" else " ") ^ s) cancelled "}"
+  "num: " ^ string_of_int num ^ "\n" ^ "procs:\n" ^ pp_procs ps ^ "cancelled: {" ^ String.concat "," (List.map (fun i -> I.Print.pp_channel (I.ChanConst i)) (Iset.elements cancelled)) ^ "}"
 
 let pp_frontier (frontier : (I.channel * int) list) : string = 
   let rec pp_frontiers (frontier : (I.channel * int) list) : string = 
@@ -68,6 +67,12 @@ let add_set (s : Iset.t) : I.channel -> Iset.t = function
 let in_set (s : Iset.t) : I.channel -> bool = function 
   | I.ChanConst i -> Iset.mem i s
   | I.ChanVar _ -> failwith "attempt to check ChanVar in canceled set"
+
+let subst_set (subst : I.channel * I.channel) (s : Iset.t) : Iset.t = 
+  match subst with
+  | (I.ChanConst c, I.ChanConst c') -> 
+    if Iset.mem c' s then Iset.add c (Iset.remove c' s) else s
+  | _ -> failwith "attempt to subst ChanVar in canceled set"
 
 let add_chanconst (s : Iset.t) : I.channel -> Iset.t = function 
   | I.ChanConst i -> Iset.add i s
@@ -139,10 +144,10 @@ let rec split_config (c : I.channel) (c1rev : procobj list) : procobj list -> (p
     if I.channel_equal c c' 
       then Some (c1rev, I.Recv (c', k), raise_c, c2)
     else split_config c ((I.Recv (c', k), raise_c) :: c1rev) c2
-  | (I.Fwd (c', c''), raise_c) :: c2 ->
+  (* | (I.Fwd (c', c''), raise_c) :: c2 ->
     if I.channel_equal c c' 
       then Some (c1rev, I.Fwd (c', c''), raise_c, c2)
-    else split_config c ((I.Fwd (c', c''), raise_c) :: c1rev) c2
+    else split_config c ((I.Fwd (c', c''), raise_c) :: c1rev) c2 *)
   | p :: c2 -> 
     split_config c (p :: c1rev) c2
 
@@ -172,7 +177,7 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
       | _ -> failwith "step_par recv case raise Impossible error"
     )
     | I.Fwd (c, c') -> (
-      let cfg' = (subst_config [(c, c')] ps, cancelled, num) in
+      let cfg' = (subst_config [(c, c')] ps, subst_set (c, c') cancelled, num) in
       step_par env true cfg' ((I.Null, raise_p) :: (subst_config [(c, c')] viewed))
     )
     | I.Call (f, chans1, chans2) -> (
@@ -262,7 +267,7 @@ let observe (depchannel : I.channel * int) (frontiers : (I.channel * int) list)
           let () = if IntHashtbl.mem msgSeq (get_chanconst c') then () else IntHashtbl.add msgSeq (get_chanconst c') [] in
           (true, ((c, depth - 1) :: (c', depth - 1) :: frontiers), visited, (new_procobj :: (List.rev_append ps1rev ps2), cancelled, num))
       )
-    | Some (ps1rev, I.Fwd (_, c'), raise_p, ps2) -> 
+    (* | Some (ps1rev, I.Fwd (_, c'), raise_p, ps2) -> 
       let new_procobj : procobj = (I.Null, raise_p) in
       let old_procobj : procobj = (I.Fwd (c, c'), raise_p) in
       if in_set cancelled c
@@ -275,7 +280,7 @@ let observe (depchannel : I.channel * int) (frontiers : (I.channel * int) list)
           let () = add_msg "cancelled" c in
           (true, frontiers, visited, (new_procobj :: (List.rev_append ps1rev ps2), add_set cancelled c, num))
         else 
-          (observed, frontiers, ((c, depth) :: visited), (List.rev_append ps1rev (old_procobj :: ps2), cancelled, num))
+          (observed, frontiers, ((c, depth) :: visited), (List.rev_append ps1rev (old_procobj :: ps2), cancelled, num)) *)
     | None -> 
       if in_set cancelled c 
       then

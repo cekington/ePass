@@ -73,10 +73,13 @@ dune exec ePass <filename>.eps
 
 ## Interpreter phrase
 ### Parsing
-The Menhir parser is used to parse file input into external syntax
+The Menhir parser is used to parse file input into external syntax.
 
 ### Elaboration
-Elaborate the external syntax into internal syntax by introducing internal type variables to eliminate recursive type declaration. Meanwhile, check proper type, proc and exec definition.
+Elaborate the external syntax into internal syntax by introducing internal type variables to eliminate recursive type declaration. Meanwhile, check proper type, process and execution definition.
 
 ### TypeChecking 
-Type checking the program, may raise various type checking error
+Type checking the program, may raise various type checking error.
+
+### Runtime
+Simulate concurrent execution and make observation by printing into the console.
