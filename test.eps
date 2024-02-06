@@ -1,7 +1,82 @@
-exnproc sil (x : 1) [] =
-  y : 1 <- cancel y; raise(fwd x y) 
+type nat = +{'e : 1, 'succ : nat}
 
-proc safe_sil (x : 1, y : 1) [] =
-  try (call sil (x) []) catch (send y ())
+proc succ (y : nat) [x : nat] =
+  send y 'succ; fwd y x
 
-exec safe_sil
+type nlist = +{'nil : 1, 'cons : nat * nlist}
+
+proc nlist_nil (r : nlist) [] = send r 'nil ; send r ()
+
+proc nlist_cons (r : nlist) [x : nat, l : nlist] =
+  send r 'cons ; send r x ; fwd r l
+
+type nnlist = +{'nil : 1, 'cons : (nat * nat) * nnlist}
+
+proc nnlist_nil (r : nnlist) [] = send r 'nil ; send r ()
+
+proc nnlist_cons (r : nnlist) [x : nat * nat, l : nnlist] =
+  send r 'cons ; send r x ; fwd r l
+
+proc make_pair (r : nat * nat) [x : nat, y : nat] =
+  send r x; fwd r y
+
+exnproc list_zip (result : nnlist) [l1 : nlist, l2 : nlist] =
+  recv l1 (
+  'nil => recv l1 (() => recv l2 (
+      'nil => recv l2 (() => send result 'nil; send result ())
+    | 'cons => raise (cancel l2; cancel result)
+    )) 
+  | 'cons => recv l1 (x => recv l2 (
+      'nil => raise (cancel l1; cancel l2; cancel x; cancel result)
+    | 'cons => recv l2 (y => 
+        xy : nat * nat <- call make_pair (xy) [x, y];
+        send result 'cons; send result xy; call list_zip (result) [l1, l2]
+      )
+    ))
+  )
+
+exnproc list_zip_v2 (result : nnlist, remain : nlist) [l1 : nlist, l2 : nlist] =
+  recv l1 (
+    'nil => recv l1 (() => recv l2 (
+      'nil => recv l2 (() => cancel remain; send result 'nil; send result ())
+    | 'cons => recv l2 (x => raise (cancel result; send remain 'cons; send remain x; fwd remain l2))
+    ))
+  | 'cons => recv l1 (x => recv l2 (
+      'nil => recv l2 (() => raise (cancel result; send remain 'cons; send remain x; fwd remain l1))
+    | 'cons => recv l2 (y => 
+        xy : nat * nat <- call make_pair (xy) [x, y];
+        send result 'cons; send result xy; call list_zip_v2 (result, remain) [l1, l2]
+      )
+    ))
+  )
+
+proc zero (z0 : nat) [] =
+  send z0 'e; send z0 ()
+
+proc one (z1 : nat) [] =
+  z0 : nat <- call zero (z0) [];
+  send z1 'succ; fwd z1 z0
+
+proc two (z2 : nat) [] =
+  z1 : nat <- call one (z1) [];
+  send z2 'succ; fwd z2 z1
+
+proc test_list_1 (r : nlist) [] =
+  z1 : nat <- call one (z1) [];
+  z2 : nat <- call two (z2) [];
+  send r 'cons; send r z2; send r 'cons; send r z1; send r 'nil; send r ()
+  
+proc test_list_2 (r : nlist) [] =
+  z0 : nat <- call zero (z0) [];
+  z1 : nat <- call one (z1) [];
+  z2 : nat <- call two (z2) [];
+  send r 'cons; send r z2; send r 'cons; send r z1; 
+  send r 'cons; send r z0; send r 'nil; send r ()
+
+proc test_list_zip (r : nnlist, remain : nlist) [] =
+  l1 : nlist <- call test_list_1 (l1) [];
+  l2 : nlist <- call test_list_2 (l2) [];
+  x : 1 <- (try (call list_zip_v2 (r, remain) [l1, l2]) catch (send x ()));
+  cancel x
+
+exec test_list_zip

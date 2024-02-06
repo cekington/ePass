@@ -77,8 +77,12 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
       match placec with
       | I.Antecedent -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is in antecedent, cannot send unit to it")
       | I.Succedent -> 
-          if I.typ_equal tc I.One then typecheck_optional_proc proc_name env gamma' delta' omega p
-          else failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is not unit type")
+        if I.typ_equal tc I.One then (
+          match p with 
+          | None -> (gamma', delta')
+          | Some _ -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is unit type, cannot have continue process")
+        )
+        else failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ ": " ^ (I.Print.pp_typ tc) ^ " is not unit type")
     )
     | Label l -> (
         match tc with 
@@ -94,7 +98,7 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
               let evolve_type = find_label_typ proc_name c l env alts in typecheck_optional_proc proc_name env ((c, evolve_type) :: gamma') delta' omega p
           | Succedent -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " of with type is in succedent, cannot send label " ^ l ^ " to it")
         )
-        | _ -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is not a choice type")
+        | _ -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ ": " ^ (I.Print.pp_typ tc) ^ " is not a choice type")
       )
     | Channel z ->
       let (tz, placez, gamma'', delta'') = lookup_channel_both proc_name z gamma' delta' in (
@@ -127,7 +131,7 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
           )
           | Succedent -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " of par type is in succedent, cannot send channel " ^ (I.Print.pp_channel z) ^ " to it")
         )
-        | _ -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is not a product type")
+        | _ -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ ": " ^ (I.Print.pp_typ tc) ^ " is not a product type")
      )
   )
   | I.Recv (c, k) -> 
@@ -138,7 +142,7 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
         | I.Antecedent ->
           if I.typ_equal tc I.One then 
             typecheck_proc proc_name env gamma' delta' omega p
-          else failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is not unit type")
+          else failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ ": " ^ (I.Print.pp_typ tc) ^ " is not unit type")
         | I.Succedent -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is in succedent, cannot send unit to it")
       )
       | I.ContLabel b -> 
@@ -176,7 +180,7 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
           | I.Antecedent -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " of with type is in succedent, cannot recieve branches to it") 
           | I.Succedent -> typecheck_branches I.Succedent b alts gamma' delta' omega
         )
-        | _ -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is not a choice type")
+        | _ -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ ": " ^ (I.Print.pp_typ tc) ^ " is not a choice type")
       )
       | I.ContChannel (z, p) -> (
         match tc with 
@@ -194,7 +198,7 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
             | _ -> typecheck_proc proc_name env gamma' ((c, I.expand_env tc2 env) :: (z, I.expand_env tc1 env) :: delta') omega p
           )
         )
-        | _ -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " is not a product type")
+        | _ -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ ": " ^ (I.Print.pp_typ tc) ^ " is not a product type")
      )
   )
   | I.Fwd (c1, c2) ->
@@ -203,8 +207,8 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
       match (placec1, placec2, I.typ_equal tc1 tc2) with
       | (I.Antecedent, I.Succedent, true) -> failwith ("In process " ^ proc_name ^ ", cannot forward succedent channel " ^ (I.Print.pp_channel c1) ^ " to antecedent channel " ^ (I.Print.pp_channel c2))
       | (I.Succedent, I.Antecedent, true) -> (gamma'', delta'') 
-      | (_, _, true) -> failwith ("In process " ^ proc_name ^ ", cannot forward channel " ^ (I.Print.pp_channel c1) ^ " and channel " ^ (I.Print.pp_channel c2) ^ " , they are either both antecedent or both succedent")
-      | (_, _, false) -> failwith ("In process " ^ proc_name ^ ", cannot forward channel " ^ (I.Print.pp_channel c1) ^ " and channel " ^ (I.Print.pp_channel c2) ^ " , they are not of the same type")
+      | (_, _, true) -> failwith ("In process " ^ proc_name ^ ", cannot forward channel " ^ (I.Print.pp_channel c1) ^ " and channel " ^ (I.Print.pp_channel c2) ^ ", they are either both antecedent or both succedent")
+      | (_, _, false) -> failwith ("In process " ^ proc_name ^ ", cannot forward channel " ^ (I.Print.pp_channel c1) ^ ": " ^ (I.Print.pp_typ tc1) ^ " and channel " ^ (I.Print.pp_channel c2) ^ ": " ^ (I.Print.pp_typ tc2) ^ ", they are not of the same type")
     )
   | I.Call (f, dargs, gargs) -> 
     let (sig_dargs, sig_gargs, is_exn) = lookup_proc proc_name f env in 

@@ -1,0 +1,17 @@
+type result = 1 @ result
+
+exnproc server_good (y : 1) [] =
+    send y ()
+
+exnproc server (y : 1) [] =
+    raise (send y ())
+
+proc client (y : result) [] = 
+    recv y (x => try call server (x) [] catch call client (y) [])
+
+proc client_test (x : result, u : 1) [] =
+    y : result <- call client (y) [];
+    send y u;
+    fwd x y
+
+exec client_test

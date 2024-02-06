@@ -8,7 +8,7 @@ type config = procobj list * Iset.t * int
 module IntHashtbl = Hashtbl.Make(Int)
 
 let msgSeq : (string list) IntHashtbl.t = IntHashtbl.create 1
-let debug = true
+let debug = false
 
 let rec subst_config (subst : (I.channel * I.channel) list) : procobj list -> procobj list = function 
   | [] -> []
@@ -44,7 +44,7 @@ let pp_config (cfg : config) : string =
     | [] -> ""
     | (p, c) :: ps -> "(" ^ I.Print.pp_proc p ^ ") with exception channal: " ^ pp_option I.Print.pp_channel c ^ "\n" ^ pp_procs ps
   in 
-  "num: " ^ string_of_int num ^ "\n" ^ "procs:\n" ^ pp_procs ps ^ "cancelled: {" ^ String.concat "," (List.map (fun i -> I.Print.pp_channel (I.ChanConst i)) (Iset.elements cancelled)) ^ "}"
+  "num: " ^ string_of_int num ^ "\n" ^ "procs:\n" ^ pp_procs ps ^ "cancelled: {" ^ String.concat "," (List.map (fun i -> I.Print.pp_channel (I.ChanConst i)) (Iset.elements cancelled)) ^ "}\n"
 
 let pp_frontier (frontier : (I.channel * int) list) : string = 
   let rec pp_frontiers (frontier : (I.channel * int) list) : string = 
@@ -144,10 +144,6 @@ let rec split_config (c : I.channel) (c1rev : procobj list) : procobj list -> (p
     if I.channel_equal c c' 
       then Some (c1rev, I.Recv (c', k), raise_c, c2)
     else split_config c ((I.Recv (c', k), raise_c) :: c1rev) c2
-  (* | (I.Fwd (c', c''), raise_c) :: c2 ->
-    if I.channel_equal c c' 
-      then Some (c1rev, I.Fwd (c', c''), raise_c, c2)
-    else split_config c ((I.Fwd (c', c''), raise_c) :: c1rev) c2 *)
   | p :: c2 -> 
     split_config c (p :: c1rev) c2
 

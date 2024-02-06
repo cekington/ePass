@@ -105,82 +105,138 @@ let%expect_test "Test runtime 1" =
 
 let%expect_test "Test runtime 2" =
   let program =
-      "type bin = +{ 'e : 1, 'b0 : bin, 'b1 : bin }
+      "type nat = +{'e : 1, 'succ : nat}
 
-      proc succ (y : bin) [x : bin] =
-      recv x ( 'e => recv x (() => send y 'b1 ; send y 'e ; send y ())
-              | 'b0 => send y 'b1 ; fwd y x
-              | 'b1 => send y 'b0 ; call succ (y) [x] )
+      proc succ (y : nat) [x : nat] =
+        send y 'succ; fwd y x
       
-      proc zero (n0 : bin) [] = send n0 'e ; send n0 ()
-      proc one (n1 : bin) [] = n0 : bin <- call zero (n0) []; call succ (n1) [n0]
-      proc two (n2 : bin) [] = n1 : bin <- call one (n1) []; call succ (n2) [n1]
-      proc three (n3 : bin) [] = n2 : bin <- call two (n2) []; call succ (n3) [n2]
-      proc four (n4 : bin) [] = n3 : bin <- call three (n3) []; call succ (n4) [n3]
+      type nlist = +{'nil : 1, 'cons : nat * nlist}
       
-      type list = +{ 'nil : 1, 'cons : bin * list }
-      proc nil (r : list) [] = send r 'nil ; send r ()
-      proc cons (r : list) [x : bin, l : list] =
+      proc nlist_nil (r : nlist) [] = send r 'nil ; send r ()
+      
+      proc nlist_cons (r : nlist) [x : nat, l : nlist] =
         send r 'cons ; send r x ; fwd r l
       
-      proc dupbin (n1 : bin, n2 : bin) [n : bin] =
-        recv n ( 'e => recv n (() => send n1 'e ; send n1 () ; send n2 'e ; send n2 ())
-                | 'b0 => send n1 'b0 ; send n2 'b0 ; call dupbin (n1, n2) [n]
-                | 'b1 => send n1 'b1 ; send n2 'b1 ; call dupbin (n1, n2) [n] )
+      type nnlist = +{'nil : 1, 'cons : (nat * nat) * nnlist}
       
-      proc dupbin_test (result1 : bin, result2 : bin) [] =
-        n1 : bin <- call one (n1) [];
-        call dupbin (result1, result2) [n1]
+      proc nnlist_nil (r : nnlist) [] = send r 'nil ; send r ()
       
-      exec dupbin_test
-
-      proc list_test (result : list) [] =
-        l : list <- call nil (l) [] ;
-        n0 : bin <- call zero (n0) [] ;
-        ln0 : list <- call cons (ln0) [n0, l] ;
-        n1 : bin <- call one (n1) [] ;
-        ln0n1 : list <- call cons (ln0n1) [n1, ln0] ;
-        n2 : bin <- call two (n2) [] ;
-        call cons (result) [n2, ln0n1]
-
-      exec list_test
-
-      proc duplist (result1 : list, result2 : list) [l : list] =
-        recv l ( 'nil => recv l (() => send result1 'nil ; send result1 () ; send result2 'nil ; send result2 ())
-                | 'cons => recv l (x => 
-                    n1 : bin <- (
-                      n2 : bin <- call dupbin (n1, n2) [x];
-                      send result2 'cons; send result2 n2
-                    );
-                    send result1 'cons; send result1 n1; call duplist (result1, result2) [l]
-                  )
-                )
-
-      proc duplist_test (result1 : list, result2 : list) [] =
-        l : list <- call list_test (l) [];
-        call duplist (result1, result2) [l]
-
-      exec duplist_test
+      proc nnlist_cons (r : nnlist) [x : nat * nat, l : nnlist] =
+        send r 'cons ; send r x ; fwd r l
+      
+      proc make_pair (r : nat * nat) [x : nat, y : nat] =
+        send r x; fwd r y
+      
+      exnproc list_zip (result : nnlist) [l1 : nlist, l2 : nlist] =
+        recv l1 (
+        'nil => recv l1 (() => recv l2 (
+            'nil => recv l2 (() => send result 'nil; send result ())
+          | 'cons => raise (cancel l2; cancel result)
+          )) 
+        | 'cons => recv l1 (x => recv l2 (
+            'nil => raise (cancel l1; cancel l2; cancel x; cancel result)
+          | 'cons => recv l2 (y => 
+              xy : nat * nat <- call make_pair (xy) [x, y];
+              send result 'cons; send result xy; call list_zip (result) [l1, l2]
+            )
+          ))
+        )
+      
+      exnproc list_zip_v2 (result : nnlist, remain : nlist) [l1 : nlist, l2 : nlist] =
+        recv l1 (
+          'nil => recv l1 (() => recv l2 (
+            'nil => recv l2 (() => cancel remain; send result 'nil; send result ())
+          | 'cons => recv l2 (x => raise (cancel result; send remain 'cons; send remain x; fwd remain l2))
+          ))
+        | 'cons => recv l1 (x => recv l2 (
+            'nil => recv l2 (() => raise (cancel result; send remain 'cons; send remain x; fwd remain l1))
+          | 'cons => recv l2 (y => 
+              xy : nat * nat <- call make_pair (xy) [x, y];
+              send result 'cons; send result xy; call list_zip_v2 (result, remain) [l1, l2]
+            )
+          ))
+        )
+      
+      proc zero (z0 : nat) [] =
+        send z0 'e; send z0 ()
+      
+      proc one (z1 : nat) [] =
+        z0 : nat <- call zero (z0) [];
+        send z1 'succ; fwd z1 z0
+      
+      proc two (z2 : nat) [] =
+        z1 : nat <- call one (z1) [];
+        send z2 'succ; fwd z2 z1
+      
+      proc test_list_1 (r : nlist) [] =
+        z1 : nat <- call one (z1) [];
+        z2 : nat <- call two (z2) [];
+        send r 'cons; send r z2; send r 'cons; send r z1; send r 'nil; send r ()
+        
+      proc test_list_2 (r : nlist) [] =
+        z0 : nat <- call zero (z0) [];
+        z1 : nat <- call one (z1) [];
+        z2 : nat <- call two (z2) [];
+        send r 'cons; send r z2; send r 'cons; send r z1; 
+        send r 'cons; send r z0; send r 'nil; send r ()
+      
+      proc test_list_zip (r : nnlist, remain : nlist) [] =
+        l1 : nlist <- call test_list_1 (l1) [];
+        l2 : nlist <- call test_list_2 (l2) [];
+        x : 1 <- (try (call list_zip_v2 (r, remain) [l1, l2]) catch (send x ()));
+        cancel x
+      
+      exec test_list_zip
       "
   in print_endline (try_runtime program);
   [%expect{|
-    Executing process dupbin_test:
-    #1 -> 'b1.'e.()
-    #0 -> 'b1.'e.()
+    Executing process test_list_zip:
+    #18 -> #5.'succ.'e.()
+    #1 -> 'cons.#7.'nil.()
+    #0 -> 'cons.#16.'cons.#18.cancelled
+    #5 -> 'succ.'e.()
+    #7 -> 'e.()
+    #16 -> #8.'succ.'succ.'e.()
+    #8 -> 'succ.'succ.'e.() |}]
+;;
 
-    Executing process list_test:
-    #0 -> 'cons.#6.'cons.#4.'cons.#2.'nil.()
-    #4 -> 'b1.'e.()
-    #6 -> 'b0.'b1.'e.()
-    #2 -> 'e.()
+let%expect_test "Test runtime 2" =
+  let program =
+      "type result = 1 @ result
 
-    Executing process duplist_test:
-    #15 -> 'b1.'e.()
-    #17 -> 'e.()
-    #1 -> 'cons.#13.'cons.#15.'cons.#17.'nil.()
-    #0 -> 'cons.#11.'cons.#14.'cons.#16.'nil.()
-    #11 -> 'b0.'b1.'e.()
-    #13 -> 'b0.'b1.'e.()
-    #16 -> 'e.()
-    #14 -> 'b1.'e.() |}]
+      exnproc server_good (y : 1) [] =
+        send y ()
+      
+      exnproc server_bad (y : 1) [] =
+        raise (send y ())
+      
+      proc client_scene1 (y : result) [] = 
+        recv y (x => try call server_good (x) [] catch call client_scene1 (y) [])
+
+      proc client_scene2 (y : result) [] = 
+        recv y (x => try call server_bad (x) [] catch call client_scene2 (y) [])
+      
+      proc client_test_1 (x : result, u : 1) [] =
+        y : result <- call client_scene1 (y) [];
+        send y u;
+        fwd x y
+      
+      proc client_test_2 (x : result, u : 1) [] =
+        y : result <- call client_scene2 (y) [];
+        send y u;
+        fwd x y
+
+      exec client_test_1
+
+      exec client_test_2
+      "
+  in print_endline (try_runtime program);
+  [%expect{|
+    Executing process client_test_1:
+    #1 -> ()
+    #0 -> cancelled
+
+    Executing process client_test_2:
+    #1 -> ()
+    #0 -> - |}]
 ;;
