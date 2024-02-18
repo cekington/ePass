@@ -10,5 +10,5 @@ let main () =
   let fileContent = String.concat ~sep:"\n" (In_channel.read_lines filename) in
   let progE : E.prog = Parse.parse fileContent in
   let progI : I.prog = Elab.elab progE in
-  let () = S.typecheck progI progI in
+  let () = S.typecheck progI in
   print_string(D.exec progI)

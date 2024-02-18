@@ -31,7 +31,7 @@
          | 'fwd' <id> <id>
          | 'call' <id> '(' <args> ')' '[' <args> ']'
          | 'cancel' <id> <procfollow>
-         | 'try' <proc> 'catch' <proc>
+         | <id> ':' <tp> '<<-' <proc> 'catch' <proc>
          | 'raise' <proc>
          | <id> ':' <tp> '<-' <simpleproc> ';' <proc>
          | <id> ':' <tp> '<-' '(' <proc> ')' ';' <proc>

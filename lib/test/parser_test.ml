@@ -67,9 +67,9 @@ let%expect_test "Test parsing 6" =
 let%expect_test "Test parsing 7" =
   let program =
       "proc inf (c : bool) [a : bool] = 
-      try call drop (a) [] catch send c 'false; send c ()"
+      u : 1 <<- cancel u; call drop (a) [] catch cancel u; send c 'false; send c ()"
   in print_endline (try_parse program);
-  [%expect{| proc inf (c : bool) [a : bool] = try (call drop (a) []) catch (send c 'false; send c ()) |}]
+  [%expect{| proc inf (c : bool) [a : bool] = u : 1 <<- (cancel u; call drop (a) []) catch (cancel u; send c 'false; send c ()) |}]
 ;;
 
 let%expect_test "Test parsing 8" =

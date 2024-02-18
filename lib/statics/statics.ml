@@ -231,14 +231,14 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
   | I.Cancel (c, p) -> 
     let (_, _, gamma', delta') = lookup_channel_both proc_name c gamma delta in
     typecheck_optional_proc proc_name env gamma' delta' omega p
-  | I.Trycatch (p1, p2) -> 
-    let (gamma', delta') = typecheck_proc proc_name env gamma delta true p1 in
-    typecheck_proc proc_name env gamma' delta' omega p2
+  | I.Trycatch (c, t, p1, p2) -> 
+    let (gamma', delta') = typecheck_proc proc_name env gamma ((c, t) :: delta) true p1 in
+    typecheck_proc proc_name env ((c, t) :: gamma') delta' omega p2
   | I.Raise p -> 
     if omega then typecheck_proc proc_name env gamma delta false p else 
     failwith ("In process " ^ proc_name ^ ", raise does not have its corresponding exceptional channel" )
   | I.Cut (c, t, p, q) ->
-    let (gamma', delta') = typecheck_proc proc_name env gamma ((c, t) :: delta) omega p in
+    let (gamma', delta') = typecheck_proc proc_name env gamma ((c, t) :: delta) false p in
     let () = check_cut_used proc_name c delta' in
     typecheck_proc proc_name env ((c, t) :: gamma') delta' omega q
   | I.Null -> failwith ("In typechecking, there is no null process")
@@ -266,17 +266,19 @@ let rec check_exec_proc (str : string) : I.prog -> unit = function
   | (I.Exec _) :: ps -> check_exec_proc str ps
   | [] -> failwith ("Exec process " ^ str ^ " which is undefined")
 
-let rec typecheck (env : I.prog) : I.prog -> unit = function 
-  | (I.TypDef (_, _)) :: ps -> typecheck env ps
+let rec typecheck_main (env : I.prog) : I.prog -> unit = function 
+  | (I.TypDef (_, _)) :: ps -> typecheck_main env ps
   | (I.ProcDef (proc_name, delta, gamma, p)) :: ps ->
       let () = check_no_dup_parms proc_name (List.append gamma delta) in
       let () = check_proc proc_name env gamma delta false p in
-      typecheck env ps
+      typecheck_main env ps
   | (I.ExnProcDef (proc_name, delta, gamma, p)) :: ps ->
       let () = check_no_dup_parms proc_name (List.append gamma delta) in
       let () = check_proc proc_name env gamma delta true p in
-      typecheck env ps
+      typecheck_main env ps
   | (I.Exec str) :: ps -> 
       let () = check_exec_proc str env in 
-      typecheck env ps
+      typecheck_main env ps
   | [] -> ()
+
+let typecheck (env : I.prog) : unit = typecheck_main env env

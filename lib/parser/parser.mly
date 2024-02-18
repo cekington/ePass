@@ -125,8 +125,8 @@ proc :
     { Call (p, provides, uses) }
   | CANCEL; a = ID; pf = procfollow;
     { Cancel (a, pf) }
-  | TRY; p = proc; CATCH; q = proc;
-    { Trycatch (p, q) }
+  | x = ID; COLON; t = typ; TRY; p = proc; CATCH; q = proc;
+    { Trycatch (x, t, p, q) }
   | RAISE; p = proc;
     { Raise p }
   | x = ID; COLON; t = typ; SLARROW; p = simpleproc; SEMICOLON; q = proc

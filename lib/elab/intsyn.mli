@@ -21,7 +21,7 @@ type proc =
   | Fwd of channel * channel
   | Call of string * channel list * channel list
   | Cancel of channel * proc option
-  | Trycatch of proc * proc
+  | Trycatch of channel * typ * proc * proc
   | Raise of proc 
   | Cut of channel * typ * proc * proc
   | Null

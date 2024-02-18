@@ -9,7 +9,7 @@ let try_typecheck (s : string) : string =
     let () = Util.reset () in 
     let ast = Parse.parse s in
     let ist = Elab.elab ast in 
-    let () = S.typecheck ist ist in
+    let () = S.typecheck ist in
     "Typecheck successful"
   with e -> 
     Exn.to_string e
@@ -161,7 +161,7 @@ let%expect_test "Test typecheck 14" =
   let program =
       "type bool = +{'true : 1, 'false : 1}
        proc test14 (x : bool, y : bool) [] = 
-          try (cancel x) catch (send y 'true; send y ())
+          u : 1 <<- (cancel u; cancel x) catch (send y 'true; cancel u; send y ())
       "
   in print_endline (try_typecheck program);
   [%expect{|
