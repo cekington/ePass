@@ -25,7 +25,7 @@ type proc =
   | Fwd of channel * channel
   | Call of string * channel list * channel list
   | Cancel of channel * proc option
-  | Trycatch of channel * typ * proc * proc
+  | Trycatch of (channel * typ) option * proc * proc
   | Raise of proc 
   | Cut of channel * typ * proc * proc
   | Null
@@ -108,7 +108,7 @@ let rec subst_proc (gamma : (channel * channel) list) : proc -> proc = function
   | Fwd (c1, c2) -> Fwd (subst_channel gamma c1, subst_channel gamma c2)
   | Call (f, xs, ys) -> Call (f, List.map ~f:(subst_channel gamma) xs, List.map ~f:(subst_channel gamma) ys)
   | Cancel (c, oproc) -> Cancel (subst_channel gamma c, Option.map ~f:(subst_proc gamma) oproc)
-  | Trycatch (c, t, p1, p2) -> Trycatch (c, t, subst_proc gamma p1, subst_proc gamma p2)
+  | Trycatch (oc, p1, p2) -> Trycatch (oc, subst_proc gamma p1, subst_proc gamma p2)
   | Raise p -> Raise (subst_proc gamma p)
   | Cut (c, t, p1, p2) -> Cut (c, t, subst_proc gamma p1, subst_proc gamma p2)
   | Null -> Null
@@ -161,7 +161,11 @@ module Print = struct
         | None -> ""
         | Some p -> "; " ^ pp_proc p
     )
-    | Trycatch (c, t, p1, p2) -> sprintf "%s : %s <<- (%s) catch (%s)" (pp_channel c) (pp_typ t) (pp_proc p1) (pp_proc p2)
+    | Trycatch (optc, p1, p2) -> sprintf "%stry (%s) catch (%s)" (
+        match optc with 
+        | None -> ""
+        | Some (c, t) -> (pp_channel c) ^ " : " ^ (pp_typ t) ^ " <<- "
+      ) (pp_proc p1) (pp_proc p2)
     | Raise p -> sprintf "raise (%s)" (pp_proc p)
     | Cut (c, t, p1, p2) -> sprintf "%s : %s <- (%s); %s" (pp_channel c) (pp_typ t) (pp_proc p1) (pp_proc p2)
     | Null -> ""

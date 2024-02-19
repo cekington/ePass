@@ -86,7 +86,8 @@ let rec find_proc_all_chanconst (chanconsts : Iset.t) : I.proc -> Iset.t = funct
     let chanconsts' = List.fold_left (fun s c -> add_chanconst s c) chanconsts chans1 in 
     List.fold_left (fun s c -> add_chanconst s c) chanconsts' chans2
   | I.Cancel (c, p) -> find_proc_all_chanconst_option (add_chanconst chanconsts c) p
-  | I.Trycatch (c, _, p1, p2) -> find_proc_all_chanconst (find_proc_all_chanconst (add_chanconst chanconsts c) p1) p2
+  | I.Trycatch (Some (c, _), p1, p2) -> find_proc_all_chanconst (find_proc_all_chanconst (add_chanconst chanconsts c) p1) p2
+  | I.Trycatch (None, p1, p2) -> find_proc_all_chanconst (find_proc_all_chanconst chanconsts p1) p2
   | I.Raise p -> find_proc_all_chanconst chanconsts p
   | I.Cut (c, _, child, parent) -> find_proc_all_chanconst (find_proc_all_chanconst (add_chanconst chanconsts c) child) parent
   | I.Null -> chanconsts
@@ -194,16 +195,22 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
     )
     | I.Cancel (c, optp) -> 
       step_par env true (ps, add_set cancelled c, num) (((match optp with | Some p' -> p' | None -> I.Null), raise_p) :: viewed)
-    | I.Trycatch (c, _, p1, p2) -> (
+    | I.Trycatch (optc, p1, p2) -> (
       let handleChan = I.ChanConst num in
-      let newChan = I.ChanConst (num + 1) in
       let handleActProc = I.Recv (handleChan, I.ContUnit p2) in
       let handleSilProc = match cancelAll p2 with 
       | Some cancelAllProc -> I.Recv (handleChan, I.ContUnit cancelAllProc)
       | None -> I.Recv (handleChan, I.ContUnit I.Null) in
       let handleCont = I.ContLabel [("?sil", handleSilProc); ("?act", handleActProc)] in
-      let handleProc = I.Recv (handleChan, handleCont) in
-      step_par env true (ps, cancelled, num + 2) ((I.subst_proc [(newChan, c)] handleProc, raise_p) :: (I.subst_proc [(newChan, c)] p1, Some handleChan) :: viewed)
+      let handleProc = I.Recv (handleChan, handleCont) in (
+        match optc with 
+        | Some (c, _) -> (
+          let newChan = I.ChanConst (num + 1) in
+          step_par env true (ps, cancelled, num + 2) ((I.subst_proc [(newChan, c)] handleProc, raise_p) :: (I.subst_proc [(newChan, c)] p1, Some handleChan) :: viewed)
+        )
+        | None -> 
+          step_par env true (ps, cancelled, num + 1) ((handleProc, raise_p) :: (p1, Some handleChan) :: viewed)
+      )
     )
     | I.Raise p -> (
       match raise_p with 

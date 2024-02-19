@@ -231,9 +231,12 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
   | I.Cancel (c, p) -> 
     let (_, _, gamma', delta') = lookup_channel_both proc_name c gamma delta in
     typecheck_optional_proc proc_name env gamma' delta' omega p
-  | I.Trycatch (c, t, p1, p2) -> 
+  | I.Trycatch (Some (c, t), p1, p2) -> 
     let (gamma', delta') = typecheck_proc proc_name env gamma ((c, t) :: delta) true p1 in
     typecheck_proc proc_name env ((c, t) :: gamma') delta' omega p2
+  | I.Trycatch (None, p1, p2) ->
+    let (gamma', delta') = typecheck_proc proc_name env gamma delta true p1 in
+    typecheck_proc proc_name env gamma' delta' omega p2
   | I.Raise p -> 
     if omega then typecheck_proc proc_name env gamma delta false p else 
     failwith ("In process " ^ proc_name ^ ", raise does not have its corresponding exceptional channel" )

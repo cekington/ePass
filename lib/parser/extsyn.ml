@@ -20,7 +20,7 @@ type proc =
   | Fwd of string * string
   | Call of string * string list * string list
   | Cancel of string * proc option
-  | Trycatch of string * typ * proc * proc
+  | Trycatch of (string * typ) option * proc * proc
   | Raise of proc 
   | Cut of string * typ * proc * proc
 
@@ -68,7 +68,11 @@ module Print = struct
       | None -> ""
       | Some p -> "; " ^ pp_proc p
   )
-  | Trycatch (c, t, p1, p2) -> sprintf "%s : %s <<- (%s) catch (%s)" c (pp_typ t) (pp_proc p1) (pp_proc p2)
+  | Trycatch (optc, p1, p2) -> sprintf "%stry (%s) catch (%s)" (
+    match optc with 
+      | None -> ""
+      | Some (c, t) -> c ^ " : " ^ (pp_typ t) ^ " <<- "
+  ) (pp_proc p1) (pp_proc p2)
   | Raise p -> sprintf "raise (%s)" (pp_proc p)
   | Cut (c, t, p1, p2) -> sprintf "%s : %s <- (%s); %s"  c (pp_typ t)
     (pp_proc p1) (pp_proc p2)

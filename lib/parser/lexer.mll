@@ -28,7 +28,8 @@ rule read =
   | "fwd" { FWD }
   | "call" { CALL }
   | "cancel" { CANCEL }
-  | "<<-" { TRY }
+  | "<<-" { SLLARROW }
+  | "try" { TRY }
   | "catch" { CATCH }
   | "raise" { RAISE }
   | "<-" { SLARROW }

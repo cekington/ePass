@@ -161,7 +161,7 @@ let%expect_test "Test typecheck 14" =
   let program =
       "type bool = +{'true : 1, 'false : 1}
        proc test14 (x : bool, y : bool) [] = 
-          u : 1 <<- (cancel u; cancel x) catch (send y 'true; cancel u; send y ())
+          try (cancel x) catch (send y 'true; send y ())
       "
   in print_endline (try_typecheck program);
   [%expect{|

@@ -135,11 +135,16 @@ let rec elab_proc (raw : E.prog) (env : I.prog) : E.proc -> (I.prog * I.proc) = 
         (env', I.Cancel (I.ChanVar str, Some proc'))
       | None -> (env, I.Cancel (I.ChanVar str, None))
     )
-  | E.Trycatch (str, typ, proc1, proc2) -> 
+  | E.Trycatch (optstr, proc1, proc2) -> 
     let (env1, proc1') = elab_proc raw env proc1 in
-    let (env2, proc2') = elab_proc raw env1 proc2 in
-    let (env3, t') = elab_typ raw env2 typ in
-    (env3, I.Trycatch (I.ChanVar str, t', proc1', proc2'))
+    let (env2, proc2') = elab_proc raw env1 proc2 in (
+      match optstr with 
+      | None -> 
+        (env2, I.Trycatch (None, proc1', proc2'))
+      | Some (str, typ) -> 
+        let (env3, t') = elab_typ raw env2 typ in
+        (env3, I.Trycatch (Some (I.ChanVar str, t'), proc1', proc2'))
+    )
   | E.Raise proc -> 
     let (env', proc') = elab_proc raw env proc in
     (env', I.Raise proc')

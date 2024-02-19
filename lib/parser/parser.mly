@@ -23,6 +23,7 @@ open Extsyn
 %token CALL
 %token CANCEL
 %token TRY
+%token SLLARROW
 %token CATCH
 %token RAISE
 %token SLARROW
@@ -48,6 +49,7 @@ open Extsyn
 %type <(string * typ) list> alts
 %type <proc> simpleproc
 %type <proc option> procfollow
+%type <(string * typ) option> spawnopt
 %type <proc> proc
 %type <string list> argsfollow
 %type <string list> args
@@ -114,6 +116,11 @@ simpleproc :
   | CANCEL; a = ID;
     { Cancel (a, None) }
 
+spawnopt :
+  | { None }
+  | x = ID; COLON; t = typ; SLLARROW;
+    { Some (x, t)}
+
 proc :  
   | SEND; a = ID; m = msg; pf = procfollow
     { Send (a, m, pf) }
@@ -125,8 +132,8 @@ proc :
     { Call (p, provides, uses) }
   | CANCEL; a = ID; pf = procfollow;
     { Cancel (a, pf) }
-  | x = ID; COLON; t = typ; TRY; p = proc; CATCH; q = proc;
-    { Trycatch (x, t, p, q) }
+  | x = spawnopt; TRY; p = proc; CATCH; q = proc;
+    { Trycatch (x, p, q) }
   | RAISE; p = proc;
     { Raise p }
   | x = ID; COLON; t = typ; SLARROW; p = simpleproc; SEMICOLON; q = proc

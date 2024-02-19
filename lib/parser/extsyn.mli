@@ -18,7 +18,7 @@ type proc =
   | Fwd of string * string
   | Call of string * string list * string list
   | Cancel of string * proc option
-  | Trycatch of string * typ * proc * proc
+  | Trycatch of (string * typ) option * proc * proc
   | Raise of proc 
   | Cut of string * typ * proc * proc
 

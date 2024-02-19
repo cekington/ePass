@@ -183,23 +183,24 @@ let%expect_test "Test runtime 2" =
       proc test_list_zip (r : nnlist, remain : nlist) [] =
         l1 : nlist <- call test_list_1 (l1) [];
         l2 : nlist <- call test_list_2 (l2) [];
-        x : 1 <<- cancel x; call list_zip_v2 (r, remain) [l1, l2] catch cancel x
+        x : 1 <- (try (call list_zip_v2 (r, remain) [l1, l2]) catch (send x ()));
+        cancel x
       
       exec test_list_zip
       "
   in print_endline (try_runtime program);
   [%expect{|
     Executing process test_list_zip:
-    #18 -> #6.'succ.'e.()
+    #18 -> #5.'succ.'e.()
     #1 -> 'cons.#7.'nil.()
     #0 -> 'cons.#16.'cons.#18.cancelled
+    #5 -> 'succ.'e.()
     #7 -> 'e.()
     #16 -> #8.'succ.'succ.'e.()
-    #8 -> 'succ.'succ.'e.()
-    #6 -> 'succ.'e.() |}]
+    #8 -> 'succ.'succ.'e.() |}]
 ;;
 
-let%expect_test "Test runtime 3" =
+let%expect_test "Test runtime 2" =
   let program =
       "type result = 1 @ result
 
@@ -210,10 +211,10 @@ let%expect_test "Test runtime 3" =
         raise (send y ())
       
       proc client_scene1 (y : result) [] = 
-        recv y (x => z : 1 <<- cancel z; call server_good (x) [] catch cancel z; call client_scene1 (y) [])
+        recv y (x => try call server_good (x) [] catch call client_scene1 (y) [])
 
       proc client_scene2 (y : result) [] = 
-        recv y (x => z : 1 <<- cancel z; call server_bad (x) [] catch cancel z; call client_scene2 (y) [])
+        recv y (x => try call server_bad (x) [] catch call client_scene2 (y) [])
       
       proc client_test_1 (x : result, u : 1) [] =
         y : result <- call client_scene1 (y) [];

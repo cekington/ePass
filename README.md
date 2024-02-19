@@ -26,12 +26,14 @@
          | 'call' <id> '(' <args> ')' '[' <args> ']' 
          | 'cancel' <id>
 
+<spawnopt> ::= · | <id> ':' <tp> '<<-'
+
 <proc> ::= 'send' <id> <msg> <procfollow>
          | 'recv' <id> '(' <cont> ')'
          | 'fwd' <id> <id>
          | 'call' <id> '(' <args> ')' '[' <args> ']'
          | 'cancel' <id> <procfollow>
-         | <id> ':' <tp> '<<-' <proc> 'catch' <proc>
+         | <spawnopt> 'try' <proc> 'catch' <proc>
          | 'raise' <proc>
          | <id> ':' <tp> '<-' <simpleproc> ';' <proc>
          | <id> ':' <tp> '<-' '(' <proc> ')' ';' <proc>
