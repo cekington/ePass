@@ -200,7 +200,7 @@ let%expect_test "Test runtime 2" =
     #8 -> 'succ.'succ.'e.() |}]
 ;;
 
-let%expect_test "Test runtime 2" =
+let%expect_test "Test runtime 3" =
   let program =
       "type result = 1 @ result
 

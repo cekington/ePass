@@ -1,0 +1,148 @@
+type list = +{'nil : 1, 'cons : 1 * list}
+type llist = +{'nil : 1, 'cons : (1 * 1) * llist}
+type dir = +{'left : 1, 'right : 1}
+type nat = +{'zero : 1, 'succ : nat}
+
+proc dupone (r : 1 * 1) [l : 1] =
+    recv l (() => 
+        r1 : 1 <- send r1 ();
+        send r r1; send r ()
+    )
+
+proc duplist (r : list * list) [l : list] = 
+    recv l (
+        'nil => recv l (() => r1 : list <- (send r1 'nil; send r1 ()); send r r1; send r 'nil; send r ())
+        | 'cons => recv l (x => 
+        y : 1 * 1 <- call dupone (y) [x];
+        r' : list * list <- call duplist (r') [l];
+        recv y (y1 => recv r' (r1' => 
+            r1 : list <- (send r1 'cons; send r1 y1; fwd r1 r1');
+            send r r1; send r 'cons; send r y; fwd r r'
+        ))
+      )
+    )
+
+proc zero (z : nat) [] =
+    send z 'zero; send z ()
+
+proc incr (n : nat) [m : nat] =
+    send n 'succ; fwd n m
+
+proc length (len : nat) [l : list] =
+    recv l (
+        'nil => recv l (() => call zero (len) [])
+      | 'cons => recv l (lx => 
+            cancel lx; 
+            len' : nat <- call length (len') [l];
+            call incr (len) [len']
+        )
+    )
+
+proc remove (l : list) [l' : list, len : nat] =
+    recv len (
+        'zero => recv len (() => fwd l l')
+      | 'succ => recv l' (
+            'nil => cancel len; cancel l; cancel l'
+          | 'cons => recv l' (l'x => cancel l'x; call remove (l) [l', len])
+      )
+    )  
+
+proc zip (result : llist) [l1 : list, l2 : list] =
+    recv l1 (
+        'nil => recv l1 (() => recv l2 (
+            'nil => recv l2 (() => send result 'nil; send result ())
+          | 'cons => cancel l2; cancel result
+            )
+        ) 
+        | 'cons => recv l1 (l1x => recv l2 (
+            'nil => cancel l1; cancel l2; cancel l1x; cancel result
+          | 'cons => recv l2 (l2y => 
+                xy : 1 * 1 <- (send xy l1x; fwd xy l2y);
+                send result 'cons; send result xy; call zip (result) [l1, l2]
+            )
+            )
+        )
+    )  
+
+exnproc zip_exn (result : llist, remainInfo : nat * dir) [l1 : list, l2 : list] = 
+    recv l1 (
+        'nil => recv l1 (() => recv l2 (
+            'nil => recv l2 (() => cancel remainInfo; send result 'nil; send result ())
+          | 'cons => recv l2 (l2x => 
+                raise (
+                    len : nat <- call length (len) [l2];
+                    realLen : nat <- call incr (realLen) [len];
+                    cancel l2x;
+                    cancel result;
+                    send remainInfo realLen;
+                    send remainInfo 'right;
+                    send remainInfo ()
+                )
+            )
+          )) 
+        | 'cons => recv l1 (l1x => 
+            recv l2 ('nil => recv l2 (() => 
+                raise (
+                    len : nat <- call length (len) [l1];
+                    realLen : nat <- call incr (realLen) [len];
+                    cancel l1x;
+                    cancel result;
+                    send remainInfo realLen;
+                    send remainInfo 'left;
+                    send remainInfo ()
+                )
+            )
+            | 'cons => recv l2 (l2y => 
+                xy : 1 * 1 <- (send xy l1x; fwd xy l2y);
+                send result 'cons; send result xy; call zip_exn (result, remainInfo) [l1, l2]
+                )
+            )
+        )     
+    )
+
+proc zip_main (result1 : llist, result2 : llist) [l1 : list, l2 : list] =
+    l1l1 : list * list <- call duplist (l1l1) [l1];
+    l2l2 : list * list <- call duplist (l2l2) [l2];
+    recv l1l1 (l1' => 
+        recv l2l2 (l2' =>
+            d : nat * dir <<- try call zip_exn (result1, d) [l1', l2'] 
+            catch 
+                recv d (len =>
+                    recv d (
+                        'left => recv d (() => 
+                            l1mod : list <- call remove (l1mod) [l1l1, len];
+                            call zip (result2) [l1mod, l2l2]
+                        )
+                      | 'right => recv d (() => 
+                            l2mod : list <- call remove (l2mod) [l2l2, len];
+                            call zip (result2) [l1l1, l2mod]
+                      )
+                    )
+                )
+        )
+    )
+
+proc list_zero (l : list) [] =
+    send l 'nil; send l ()
+
+proc list_one (l : list) [] =
+    l0 : list <- call list_zero (l0) [];
+    x : 1 <- send x ();
+    send l 'cons; send l x; fwd l l0
+
+proc list_two (l : list) [] =
+    l1 : list <- call list_one (l1) [];
+    x : 1 <- send x ();
+    send l 'cons; send l x; fwd l l1
+
+proc list_three (l : list) [] =
+    l2 : list <- call list_two (l2) [];
+    x : 1 <- send x ();
+    send l 'cons; send l x; fwd l l2   
+
+proc test_zip (result1 : llist, result2 : llist) [] =
+    l1 : list <- call list_three (l1) [];
+    l2 : list <- call list_three (l2) [];
+    call zip_main (result1, result2) [l1, l2]
+
+exec test_zip
