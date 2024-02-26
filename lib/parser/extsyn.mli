@@ -30,7 +30,6 @@ and cont =
 type def = 
   | TypDef of string * typ
   | ProcDef of string * (string * typ) list * (string * typ) list * proc
-  | ExnProcDef of string * (string * typ) list * (string * typ) list * proc
   | Exec of string 
 
 type prog = def list

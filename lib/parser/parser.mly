@@ -32,7 +32,6 @@ open Extsyn
 
 %token TYPE 
 %token PROC 
-%token EXNPROC
 %token EXEC
 
 %token LPAREN
@@ -197,8 +196,6 @@ defn :
     { TypDef (id, t) }
   | PROC; id = ID; LPAREN; provides = annoargs; RPAREN; LBRACKET; uses = annoargs; RBRACKET; EQUAL; p = proc;
     { ProcDef (id, provides, uses, p) }
-  | EXNPROC; id = ID; LPAREN; provides = annoargs; RPAREN; LBRACKET; uses = annoargs; RBRACKET; EQUAL; p = proc;
-    { ExnProcDef (id, provides, uses, p) }
   | EXEC; p = ID;
     { Exec p }
   ;

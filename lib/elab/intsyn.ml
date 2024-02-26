@@ -38,7 +38,6 @@ and cont =
 type def = 
   | TypDef of string * typ
   | ProcDef of string * (channel * typ) list * (channel * typ) list * proc
-  | ExnProcDef of string * (channel * typ) list * (channel * typ) list * proc
   | Exec of string 
 
 type prog = def list
@@ -86,8 +85,6 @@ let rec find_proc (env : prog) (proc_name : string) : def = match env with
   | [] -> failwith "find_proc raise Impossible error"
   | (ProcDef (f, d, g, p)) :: envs -> 
     if String.equal f proc_name then ProcDef (f, d, g, p) else find_proc envs proc_name
-  | (ExnProcDef (f, d, g, p)) :: envs -> 
-    if String.equal f proc_name then ExnProcDef (f, d, g, p) else find_proc envs proc_name
   | _ :: envs -> find_proc envs proc_name
 
 let rec subst_channel (gamma : (channel * channel) list) (c : channel) : channel = 
@@ -182,15 +179,10 @@ module Print = struct
       let xs' = List.map ~f:(fun (c, t) -> (pp_channel c) ^ " : " ^ (pp_typ t)) xs in 
       let ys' = List.map ~f:(fun (c, t) -> (pp_channel c) ^ " : " ^ (pp_typ t)) ys in
         sprintf "proc %s (%s) [%s] = %s" f (String.concat ~sep:", " xs') (String.concat ~sep:", " ys') (pp_proc p)
-    | ExnProcDef (f, xs, ys, p) ->
-      let xs' = List.map ~f:(fun (c, t) -> (pp_channel c) ^ " : " ^ (pp_typ t)) xs in 
-      let ys' = List.map ~f:(fun (c, t) -> (pp_channel c) ^ " : " ^ (pp_typ t)) ys in
-        sprintf "exnproc %s (%s) [%s] = %s" f (String.concat ~sep:", " xs') (String.concat ~sep:", " ys') (pp_proc p)
     | Exec str -> sprintf "exec %s" str
     
   let rec pp_prog = function
     | [] -> ""
     | d :: ds -> (pp_def d) ^ "\n" ^ (pp_prog ds)
-
 
 end

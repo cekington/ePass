@@ -42,29 +42,25 @@ proc remove (l : list) [l' : list, len : nat] =
     recv len (
         'zero => recv len (() => fwd l l')
       | 'succ => recv l' (
-            'nil => cancel len; cancel l; cancel l'
-          | 'cons => recv l' (l'x => cancel l'x; call remove (l) [l', len])
+        'cons => recv l' (l'x => cancel l'x; call remove (l) [l', len])
       )
     )  
 
 proc zip (result : llist) [l1 : list, l2 : list] =
     recv l1 (
         'nil => recv l1 (() => recv l2 (
-            'nil => recv l2 (() => send result 'nil; send result ())
-          | 'cons => cancel l2; cancel result
-            )
+            'nil => recv l2 (() => send result 'nil; send result ()))
         ) 
         | 'cons => recv l1 (l1x => recv l2 (
-            'nil => cancel l1; cancel l2; cancel l1x; cancel result
-          | 'cons => recv l2 (l2y => 
+            'cons => recv l2 (l2y => 
                 xy : 1 * 1 <- (send xy l1x; fwd xy l2y);
                 send result 'cons; send result xy; call zip (result) [l1, l2]
             )
             )
         )
-    )  
+    )
 
-exnproc zip_exn (result : llist, remainInfo : nat * dir) [l1 : list, l2 : list] = 
+proc zip_exn (result : llist, remainInfo : nat * dir) [l1 : list, l2 : list] = 
     recv l1 (
         'nil => recv l1 (() => recv l2 (
             'nil => recv l2 (() => cancel remainInfo; send result 'nil; send result ())

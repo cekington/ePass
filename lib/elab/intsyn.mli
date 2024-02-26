@@ -34,7 +34,6 @@ and cont =
 type def = 
   | TypDef of string * typ
   | ProcDef of string * (channel * typ) list * (channel * typ) list * proc
-  | ExnProcDef of string * (channel * typ) list * (channel * typ) list * proc
   | Exec of string 
 
 type prog = def list
@@ -64,4 +63,4 @@ module Print : sig
     val pp_def : def -> string
     val pp_prog : prog -> string
   
-  end
+end

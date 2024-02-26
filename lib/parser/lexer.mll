@@ -37,7 +37,6 @@ rule read =
   | "|" { BAR }
   | "type" { TYPE }
   | "proc" { PROC }
-  | "exnproc" { EXNPROC }
   | "exec" { EXEC }
   | "(" { LPAREN }
   | ")" { RPAREN }

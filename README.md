@@ -57,7 +57,6 @@
 
 <defn> ::= 'type' <id> = <tp>
          | 'proc' <id> '(' <annoargs> ')' '[' <annoargs> ']' '=' <proc>
-         | 'exnproc' <id> '(' <annoargs> ')' '[' <annoargs> ']' '=' <proc>
          | 'exec' <id>
 
 <prog> ::= · | <defn> <prog>

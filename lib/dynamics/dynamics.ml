@@ -106,17 +106,26 @@ and find_msg_all_chanconst (chanconsts : Iset.t) : I.msg -> Iset.t = function
   | I.Label _ -> chanconsts
   | I.Channel c -> add_chanconst chanconsts c
 
-let cancelAll (p : I.proc) : I.proc option = 
-  let all_chanconst : Iset.t = find_proc_all_chanconst Iset.empty p in
-  let rec generate_cancel_proc : int list -> I.proc option = function 
+let rec generate_cancel_proc : int list -> I.proc option = function 
   | [] -> None 
   | [n] -> Some (I.Cancel (I.ChanConst n, None))
-  | n :: ns -> Some (I.Cancel (I.ChanConst n, generate_cancel_proc ns)) in 
+  | n :: ns -> Some (I.Cancel (I.ChanConst n, generate_cancel_proc ns))
+
+let cancelAllcont (k : I.cont) : I.proc option = 
+  let all_chanconst : Iset.t = find_cont_all_chanconst Iset.empty k in 
   generate_cancel_proc (Iset.to_list all_chanconst)
 
-let rec select (l : string) : (string * I.proc) list -> I.proc = function 
-  | [] -> failwith "select raise Impossible error"
-  | (l', p) :: ls -> if String.equal l l' then p else select l ls
+let cancelAll (p : I.proc) : I.proc option = 
+  let all_chanconst : Iset.t = find_proc_all_chanconst Iset.empty p in
+  generate_cancel_proc (Iset.to_list all_chanconst)
+
+let cancelAllopt : I.proc option -> I.proc option = function 
+  | None -> None 
+  | Some p -> cancelAll p
+
+let rec select (l : string) : (string * I.proc) list -> I.proc option = function 
+  | [] -> None
+  | (l', p) :: ls -> if String.equal l l' then Some p else select l ls
 
 let activate (c : I.channel) : I.proc = 
   I.Send (c, I.Label "?act", Some(I.Send (c, I.Unit, None)))
@@ -128,11 +137,11 @@ let test_need_silent (l : procobj list) : I.channel option -> procobj list = fun
   | None -> l
   | Some c -> (silent c, None) :: l
 
-let reduce (msg : I.msg) (k : I.cont) : I.proc =
+let reduce (msg : I.msg) (k : I.cont) : I.proc option =
   match (msg, k) with 
-  | (I.Unit, I.ContUnit p) -> p
+  | (I.Unit, I.ContUnit p) -> Some p
   | (I.Label l, I.ContLabel ks) -> select l ks
-  | (I.Channel c, I.ContChannel (x, p)) -> I.subst_proc [(c, x)] p
+  | (I.Channel c, I.ContChannel (x, p)) -> Some (I.subst_proc [(c, x)] p)
   | _ -> failwith "reduce raise Impossible error" 
 
 let rec split_config (c : I.channel) (c1rev : procobj list) : procobj list -> (procobj list * I.proc * I.channel option * procobj list) option = function 
@@ -156,9 +165,16 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
     | I.Send (c, msg, optp) -> (
       match split_config c [] ps with
       | Some (ps1rev, I.Recv (_, k), raise_r, ps2) -> (
-        let reduced_procobj = (reduce msg k, raise_r) in 
-        step_par env true ((List.rev ps1rev) @ ps2, cancelled, num) 
-        (((match optp with | Some p' -> p' | None -> I.Null), raise_p) :: reduced_procobj :: viewed)
+        let reduced_procobjs : procobj list = (
+          match reduce msg k with
+        | None -> (
+          match cancelAllopt optp with
+          | None -> [(I.Raise I.Null, raise_r)]
+          | Some cancelProc -> [(I.Raise cancelProc, raise_r)]
+        )
+        | Some reduce_p -> ((match optp with | Some p' -> p' | None -> I.Null), raise_p) :: [(reduce_p, raise_r)]
+        ) in 
+        step_par env true ((List.rev ps1rev) @ ps2, cancelled, num) (List.append reduced_procobjs viewed)
       )
       | None -> step_par env changed (ps, cancelled, num) ((p, raise_p) :: viewed)
       | _ -> failwith "step_par send case raise Impossible error"
@@ -166,7 +182,15 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
     | I.Recv (c, k) -> (
       match split_config c [] ps with
       | Some (ps1rev, I.Send (_, msg, optp), raise_s, ps2) -> (
-        let reduced_procobj = (reduce msg k, raise_p) in 
+        let reduced_procobj = (
+          match reduce msg k with 
+          | None -> (
+            match cancelAllcont k with 
+            | None -> (I.Raise I.Null, raise_p)
+            | Some cancelProc -> (I.Raise cancelProc, raise_p)
+          )
+          | Some reduce_p -> (reduce_p, raise_p)
+        ) in 
         step_par env true ((List.rev ps1rev) @ ps2, cancelled, num) 
         (((match optp with | Some p' -> p' | None -> I.Null), raise_s) :: reduced_procobj :: viewed)
       )
@@ -180,12 +204,6 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
     | I.Call (f, chans1, chans2) -> (
       match I.find_proc env f with
       | I.ProcDef (_, delta, gamma, fp) -> (
-        let subst1 = zip chans1 (List.map (fun (x, _) -> x) delta) in
-        let subst2 = zip chans2 (List.map (fun (x, _) -> x) gamma) in
-        let fp' = I.subst_proc (subst1 @ subst2) fp in
-        step_par env true (ps, cancelled, num) ((fp', raise_p) :: viewed)
-      )
-      | I.ExnProcDef (_, delta, gamma, fp) -> (
         let subst1 = zip chans1 (List.map (fun (x, _) -> x) delta) in
         let subst2 = zip chans2 (List.map (fun (x, _) -> x) gamma) in
         let fp' = I.subst_proc (subst1 @ subst2) fp in
@@ -214,7 +232,7 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
     )
     | I.Raise p -> (
       match raise_p with 
-      | None -> failwith "step_par raise case raise Impossible error"
+      | None -> failwith "Uncaught exception, process aborted"
       | Some c -> step_par env true (ps, cancelled, num) ((activate c, None) :: (p, None) :: viewed)
     )
     | I.Cut (c, _, child, parent) -> (
@@ -271,20 +289,6 @@ let observe (depchannel : I.channel * int) (frontiers : (I.channel * int) list)
           let () = if IntHashtbl.mem msgSeq (get_chanconst c') then () else IntHashtbl.add msgSeq (get_chanconst c') [] in
           (true, ((c, depth - 1) :: (c', depth - 1) :: frontiers), visited, (new_procobj :: (List.rev_append ps1rev ps2), cancelled, num))
       )
-    (* | Some (ps1rev, I.Fwd (_, c'), raise_p, ps2) -> 
-      let new_procobj : procobj = (I.Null, raise_p) in
-      let old_procobj : procobj = (I.Fwd (c, c'), raise_p) in
-      if in_set cancelled c
-      then 
-        let () = add_msg "cancelled" c in
-        (true, frontiers, visited, (new_procobj :: (List.rev_append ps1rev ps2), add_set cancelled c', num))
-      else
-        if in_set cancelled c' 
-        then 
-          let () = add_msg "cancelled" c in
-          (true, frontiers, visited, (new_procobj :: (List.rev_append ps1rev ps2), add_set cancelled c, num))
-        else 
-          (observed, frontiers, ((c, depth) :: visited), (List.rev_append ps1rev (old_procobj :: ps2), cancelled, num)) *)
     | None -> 
       if in_set cancelled c 
       then
@@ -332,12 +336,25 @@ let exec_one (env : I.prog) (proc_name : string) : unit = (
 
 let rec exec_helper (env : I.prog) : I.prog -> string = function 
   | [] -> ""
+  | [I.Exec f] -> 
+    let () = IntHashtbl.clear msgSeq in (
+    try 
+      let () = exec_one env f in
+      let thisMSG = translate_msg () in
+      "Executing process " ^ f ^ ":\n" ^ thisMSG
+    with Failure e ->
+      "Executing process " ^ f ^ ":\n" ^ e
+    )
   | (I.Exec f) :: envs -> 
-    let () = IntHashtbl.clear msgSeq in
-    let () = exec_one env f in
-    let thisMSG = translate_msg () in
-    let nextMSGs = exec_helper env envs in
-    "Executing process " ^ f ^ ":\n" ^ thisMSG ^ "\n" ^ nextMSGs
+    let nextMSGs = exec_helper env envs in (
+    try 
+      let () = IntHashtbl.clear msgSeq in
+      let () = exec_one env f in
+      let thisMSG = translate_msg () in
+      "Executing process " ^ f ^ ":\n" ^ thisMSG ^ "\n" ^ nextMSGs
+    with Failure e ->
+      "Executing process " ^ f ^ ":\n" ^ e ^ "\n" ^ nextMSGs
+    )
   | _ :: envs -> exec_helper env envs 
 
 let exec (env : I.prog) : string = 

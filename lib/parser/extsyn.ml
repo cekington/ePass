@@ -32,7 +32,6 @@ and cont =
 type def = 
   | TypDef of string * typ
   | ProcDef of string * (string * typ) list * (string * typ) list * proc
-  | ExnProcDef of string * (string * typ) list * (string * typ) list * proc
   | Exec of string 
 
 type prog = def list
@@ -89,10 +88,6 @@ module Print = struct
     let xs' = List.map ~f:(fun (s, t) -> s ^ " : " ^ (pp_typ t)) xs in 
     let ys' = List.map ~f:(fun (s, t) -> s ^ " : " ^ (pp_typ t)) ys in
       sprintf "proc %s (%s) [%s] = %s" f (String.concat ~sep:", " xs') (String.concat ~sep:", " ys') (pp_proc p)
-  | ExnProcDef (f, xs, ys, p) ->
-    let xs' = List.map ~f:(fun (s, t) -> s ^ " : " ^ (pp_typ t)) xs in 
-    let ys' = List.map ~f:(fun (s, t) -> s ^ " : " ^ (pp_typ t)) ys in
-      sprintf "exnproc %s (%s) [%s] = %s" f (String.concat ~sep:", " xs') (String.concat ~sep:", " ys') (pp_proc p)
   | Exec p -> sprintf "exec %s" p
 
   let rec pp_prog = function

@@ -59,8 +59,6 @@ let rec lookup_proc (proc_name : string) (f : string) : I.prog -> (ctx * ctx * b
   | (I.TypDef (_, _)) :: ps -> lookup_proc proc_name f ps
   | (I.ProcDef (s, right, left, _)) :: ps -> 
       if String.equal s f then (right, left, false) else lookup_proc proc_name f ps
-  | (I.ExnProcDef (s, right, left, _)) :: ps -> 
-      if String.equal s f then (right, left, true) else lookup_proc proc_name f ps
   | (I.Exec _) :: ps -> lookup_proc proc_name f ps
   | [] -> failwith ("In process " ^ proc_name ^ ", cannot call process " ^ f ^ " which is undefined")
 
@@ -165,7 +163,9 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
           | [] -> ( 
             match alts with 
             | [] -> ([], [])
-            | (l, _) :: _ -> failwith ("In process " ^ proc_name ^ ", choice type of channel " ^ (I.Print.pp_channel c) ^ " has non-exaustive match, missing label: " ^ l)
+            | (l, _) :: _ -> 
+              let () = print_string ("Warning: In process " ^ proc_name ^ ", choice type of channel " ^ (I.Print.pp_channel c) ^ " : " ^ (I.Print.pp_typ tc) ^ " has non-exaustive match, missing label: " ^ l ^ "\n") in
+              ([], [])
           )
         )
         in (
@@ -238,8 +238,8 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
     let (gamma', delta') = typecheck_proc proc_name env gamma delta true p1 in
     typecheck_proc proc_name env gamma' delta' omega p2
   | I.Raise p -> 
-    if omega then typecheck_proc proc_name env gamma delta false p else 
-    failwith ("In process " ^ proc_name ^ ", raise does not have its corresponding exceptional channel" )
+    let () = if omega then () else print_string ("Warning: In process " ^ proc_name ^ ", raise (...) does not have its corresponding exceptional handler\n") in
+    typecheck_proc proc_name env gamma delta false p
   | I.Cut (c, t, p, q) ->
     let (gamma', delta') = typecheck_proc proc_name env gamma ((c, t) :: delta) false p in
     let () = check_cut_used proc_name c delta' in
@@ -262,10 +262,6 @@ let rec check_exec_proc (str : string) : I.prog -> unit = function
           () 
         else failwith ("Exec process " ^ str ^ " has non empty antecedents")
       else check_exec_proc str ps
-  | (I.ExnProcDef (s, _, _, _)) :: ps -> 
-      if String.equal s str then 
-        failwith ("Exec exceptional process " ^ str)
-      else check_exec_proc str ps
   | (I.Exec _) :: ps -> check_exec_proc str ps
   | [] -> failwith ("Exec process " ^ str ^ " which is undefined")
 
@@ -274,10 +270,6 @@ let rec typecheck_main (env : I.prog) : I.prog -> unit = function
   | (I.ProcDef (proc_name, delta, gamma, p)) :: ps ->
       let () = check_no_dup_parms proc_name (List.append gamma delta) in
       let () = check_proc proc_name env gamma delta false p in
-      typecheck_main env ps
-  | (I.ExnProcDef (proc_name, delta, gamma, p)) :: ps ->
-      let () = check_no_dup_parms proc_name (List.append gamma delta) in
-      let () = check_proc proc_name env gamma delta true p in
       typecheck_main env ps
   | (I.Exec str) :: ps -> 
       let () = check_exec_proc str env in 

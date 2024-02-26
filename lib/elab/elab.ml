@@ -44,8 +44,6 @@ let rec check_no_dup_branches (l : string) : (string * E.proc) list -> unit = fu
 let rec check_exec_proc_declared (l : string) : E.prog -> unit = function 
   | E.ProcDef (str, _, _, _) :: ds -> 
     if String.equal l str then () else check_exec_proc_declared l ds
-  | E.ExnProcDef (str, _, _, _) :: ds -> 
-    if String.equal l str then () else check_exec_proc_declared l ds
   | _ :: ds -> check_exec_proc_declared l ds
   | [] -> failwith ("Exec process " ^ l ^ " is not declared")
 
@@ -53,8 +51,6 @@ let rec check_def_twice (str : string) (category : string) : E.prog -> unit = fu
   | E.TypDef (str', _) :: ds -> 
     if String.equal category "type" && String.equal str str' then failwith ("Type " ^ str ^ " is defined twice") else check_def_twice str category ds
   | E.ProcDef (str', _, _, _) :: ds -> 
-    if String.equal category "proc" && String.equal str str' then failwith ("Process " ^ str ^ " is defined twice") else check_def_twice str category ds
-  | E.ExnProcDef (str', _, _, _) :: ds -> 
     if String.equal category "proc" && String.equal str str' then failwith ("Process " ^ str ^ " is defined twice") else check_def_twice str category ds
   | _ :: ds -> check_def_twice str category ds
   | [] -> ()
@@ -191,12 +187,6 @@ let rec elab_prog (raw : E.prog) (env : I.prog) : E.prog -> I.prog = function
     let (env'', parms2') = elab_parms raw env' parms2 in 
     let (env''', proc') = elab_proc raw env'' proc in 
     elab_prog raw (I.ProcDef (str, parms1', parms2', proc') :: env''') ds
-  | E.ExnProcDef (str, parms1, parms2, proc) :: ds -> 
-    let () = check_def_twice str "proc" ds in
-    let (env', parms1') = elab_parms raw env parms1 in 
-    let (env'', parms2') = elab_parms raw env' parms2 in 
-    let (env''', proc') = elab_proc raw env'' proc in 
-    elab_prog raw (I.ExnProcDef (str, parms1', parms2', proc') :: env''') ds
   | E.Exec str :: ds -> 
     let () = check_exec_proc_declared str raw in 
     elab_prog raw (I.Exec str :: env) ds
