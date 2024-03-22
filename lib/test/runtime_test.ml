@@ -127,7 +127,7 @@ let%expect_test "Test runtime 2" =
       proc make_pair (r : nat * nat) [x : nat, y : nat] =
         send r x; fwd r y
       
-      exnproc list_zip (result : nnlist) [l1 : nlist, l2 : nlist] =
+      proc list_zip (result : nnlist) [l1 : nlist, l2 : nlist] =
         recv l1 (
         'nil => recv l1 (() => recv l2 (
             'nil => recv l2 (() => send result 'nil; send result ())
@@ -142,7 +142,7 @@ let%expect_test "Test runtime 2" =
           ))
         )
       
-      exnproc list_zip_v2 (result : nnlist, remain : nlist) [l1 : nlist, l2 : nlist] =
+      proc list_zip_v2 (result : nnlist, remain : nlist) [l1 : nlist, l2 : nlist] =
         recv l1 (
           'nil => recv l1 (() => recv l2 (
             'nil => recv l2 (() => cancel remain; send result 'nil; send result ())
@@ -190,6 +190,10 @@ let%expect_test "Test runtime 2" =
       "
   in print_endline (try_runtime program);
   [%expect{|
+    Warning: In process list_zip, raise (...) does not have its corresponding exceptional handler
+    Warning: In process list_zip, raise (...) does not have its corresponding exceptional handler
+    Warning: In process list_zip_v2, raise (...) does not have its corresponding exceptional handler
+    Warning: In process list_zip_v2, raise (...) does not have its corresponding exceptional handler
     Executing process test_list_zip:
     #18 -> #5.'succ.'e.()
     #1 -> 'cons.#7.'nil.()
@@ -204,10 +208,10 @@ let%expect_test "Test runtime 3" =
   let program =
       "type result = 1 @ result
 
-      exnproc server_good (y : 1) [] =
+      proc server_good (y : 1) [] =
         send y ()
       
-      exnproc server_bad (y : 1) [] =
+      proc server_bad (y : 1) [] =
         raise (send y ())
       
       proc client_scene1 (y : result) [] = 
@@ -232,6 +236,7 @@ let%expect_test "Test runtime 3" =
       "
   in print_endline (try_runtime program);
   [%expect{|
+    Warning: In process server_bad, raise (...) does not have its corresponding exceptional handler
     Executing process client_test_1:
     #1 -> ()
     #0 -> cancelled

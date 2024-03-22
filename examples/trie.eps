@@ -1,0 +1,211 @@
+type bool = +{'false : 1, 'true : 1}
+type trie = +{'node : trie * bool * trie, 'leaf : 1}
+type bin = +{'b0 : bin, 'b1 : bin, 'e : 1}
+
+proc false (f : bool) [] = send f 'false; send f ()
+proc true (t : bool) [] = send t 'true; send t ()
+proc or (b : bool) [b1 : bool, b2 : bool] = 
+    recv b1 (
+        'true => cancel b2; send b 'true; fwd b b1
+      | 'false => recv b2 (
+            'true => cancel b1; send b 'true; fwd b b2
+          | 'false => cancel b1; send b 'false; fwd b b2
+      )
+    )
+
+proc fstTrue (b : bool) [b1 : bool, b2 : bool] =
+    recv b1 (
+        'true => recv b2 (
+            'true => cancel b2; send b 'false; fwd b b1
+          | 'false => cancel b2; send b 'true; fwd b b1
+        )
+      | 'false => cancel b2; send b 'false; fwd b b1
+    )
+
+proc one (n : bin) [] =
+  send n 'b1; send n 'e; send n ()
+
+proc two (n : bin) [] =
+  send n 'b1; send n 'b0; send n 'e; send n ()
+
+proc empty (t : trie) [] = send t 'leaf; send t ()
+
+proc singleton (t : trie) [x : bin] =
+    recv x (
+        'b0 => 
+            lt : trie <- call singleton (lt) [x];
+            b : bool <- call false (b) [];
+            rg : trie <- call empty (rg) [];
+            send t 'node;
+            send t lt;
+            send t b;
+            fwd t rg
+      | 'b1 => 
+            lt : trie <- call empty (lt) [];
+            b : bool <- call false (b) [];
+            rg : trie <- call singleton (rg) [x];
+            send t 'node;
+            send t lt;
+            send t b;
+            fwd t rg
+      | 'e => recv x (() =>
+            lt : trie <- call empty (lt) [];
+            b : bool <- call true (b) [];
+            rg : trie <- call empty (rg) [];
+            send t 'node;
+            send t lt;
+            send t b;
+            fwd t rg
+        )
+    )
+
+proc union (t : trie) [t1 : trie, t2 : trie] = 
+    recv t1 (
+        'leaf => recv t1 (() =>
+            fwd t t2
+        )
+      | 'node => recv t1 (t1Left => recv t1 (t1b =>
+            recv t2 (
+                'leaf => 
+                    cancel t2;
+                    send t 'node;
+                    send t t1Left;
+                    send t t1b;
+                    fwd t t1
+              | 'node => recv t2 (t2Left => recv t2 (t2b => 
+                    tLeft : trie <- call union (tLeft) [t1Left, t2Left];
+                    tb : bool <- call or (tb) [t1b, t2b];
+                    tRight : trie <- call union (tRight) [t1, t2];
+                    send t 'node;
+                    send t tLeft;
+                    send t tb;
+                    fwd t tRight
+                )
+              )
+            )
+        )    
+      )
+    )
+
+proc diff (t : trie) [t1 : trie, t2 : trie] = 
+    recv t1 (
+        'leaf =>
+            cancel t2;
+            send t 'leaf;
+            fwd t t1
+      | 'node => recv t1 (t1Left => recv t1 (t1b =>
+            recv t2 (
+                'leaf => 
+                    cancel t2;
+                    send t 'node;
+                    send t t1Left;
+                    send t t1b;
+                    fwd t t1
+              | 'node => recv t2 (t2Left => recv t2 (t2b => 
+                    tLeft : trie <- call diff (tLeft) [t1Left, t2Left];
+                    tb : bool <- call fstTrue (tb) [t1b, t2b];
+                    tRight : trie <- call diff (tRight) [t1, t2];
+                    send t 'node;
+                    send t tLeft;
+                    send t tb;
+                    fwd t tRight
+                )
+              )
+            )
+        )
+      )
+    )
+
+proc dup_bool (x : bool * bool) [y : bool] =
+  recv y (
+    'true => x1 : bool <- call true (x1) [];
+    send x x1; send x 'true; fwd x y
+  | 'false => x1 : bool <- call false (x1) [];
+    send x x1; send x 'false; fwd x y
+  )
+
+proc in (b : bool * trie) [t : trie, x : bin] =
+    recv x (
+        'b0 => recv t (
+            'leaf => b' : bool <- call false (b') [];
+            cancel x; send b b'; send b 'leaf; fwd b t
+          | 'node => recv t (tl => recv t (tb => 
+            res : bool * trie <- call in (res) [tl, x];
+            recv res (resb => 
+              send b resb; send b 'node; send b res; send b tb; fwd b t
+            )
+          ))
+        )
+      | 'b1 => recv t (
+            'leaf => b' : bool <- call false (b') [];
+            cancel x; send b b'; send b 'leaf; fwd b t
+          | 'node => recv t (tl => recv t (tb => 
+            res : bool * trie <- call in (res) [t, x];
+            recv res (resb => 
+              send b resb; send b 'node; send b tl; send b tb; fwd b res
+            )
+          ))
+        )
+      | 'e => cancel x; recv t (
+            'leaf => b' : bool <- call false (b') [];
+            send b b'; send b 'leaf; fwd b t
+          | 'node => recv t (tl => recv t (tb =>
+            bb : bool * bool <- call dup_bool (bb) [tb];
+            recv bb (b1 => 
+              send b b1; send b 'node; send b tl; send b bb; fwd b t
+            )
+          ))
+      )
+    )
+
+type set = &{'insert : bin -o set,
+             'delete : bin -o set,
+             'member : bin -o bool * set}
+
+proc new_set (s : set) [] =
+  t : trie <- call empty (t) [];
+  call trieset (s) [t]
+  
+proc trieset (s : set) [t : trie] =
+  recv s (
+    'insert =>
+      recv s (x =>
+        tx : trie <- call singleton (tx) [x];
+        t' : trie <- call union (t') [t, tx];
+        call trieset (s) [t']
+      )
+  | 'delete =>
+      recv s (x =>
+        tx : trie <- call singleton (tx) [x];
+        t' : trie <- call diff (t') [t, tx];
+        call trieset (s) [t']
+      )
+  | 'member =>
+      recv s (x =>
+        res : bool * trie <- call in (res) [t, x];
+        recv res (resb => send s resb; call trieset (s) [res])
+      )
+)
+
+proc test_trieset () [] =
+  tset : set <- call new_set (tset) [];
+  one1 : bin <- call one (one1) [];
+  one2 : bin <- call one (one2) [];
+  two1 : bin <- call two (two1) [];
+  two2 : bin <- call two (two2) [];
+  send tset 'insert; send tset one1;
+  send tset 'delete; send tset two1;
+  send tset 'member; send tset two2;
+  recv tset (b2 => recv b2 (
+      'true => cancel b2; 
+      send tset 'member; send tset one2; 
+        recv tset (b1 => recv b1 (
+            'true => cancel b1; cancel tset
+          )
+        ) 
+    )
+  )
+
+
+
+exec test_trieset

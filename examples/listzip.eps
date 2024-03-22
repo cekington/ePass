@@ -136,9 +136,16 @@ proc list_three (l : list) [] =
     x : 1 <- send x ();
     send l 'cons; send l x; fwd l l2   
 
-proc test_zip (result1 : llist, result2 : llist) [] =
+proc test_zip_main (result1 : llist, result2 : llist) [] =
     l1 : list <- call list_three (l1) [];
-    l2 : list <- call list_three (l2) [];
+    l2 : list <- call list_two (l2) [];
     call zip_main (result1, result2) [l1, l2]
+
+proc test_zip (result : llist, r : 1) [] =
+    l1 : list <- call list_three (l1) [];
+    l2 : list <- call list_two (l2) [];
+    try call zip (result) [l1, l2] catch send r ()
+
+exec test_zip_main
 
 exec test_zip

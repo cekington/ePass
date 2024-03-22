@@ -1,0 +1,27 @@
+type result = 1 @ result
+
+proc server_good (y : 1) [] =
+    send y ()
+
+proc server_bad (y : 1) [] =
+    raise (cancel y)
+
+proc client_scene1 (y : result) [] = 
+    recv y (x => try call server_good (x) [] catch call client_scene1 (y) [])
+
+proc client_scene2 (y : result) [] = 
+    recv y (x => try call server_bad (x) [] catch call client_scene2 (y) [])
+
+proc client_test_1 (x : result, u : 1) [] =
+    y : result <- call client_scene1 (y) [];
+    send y u;
+    fwd x y
+
+proc client_test_2 (x : result, u : 1) [] =
+    y : result <- call client_scene2 (y) [];
+    send y u;
+    fwd x y
+
+exec client_test_1
+
+exec client_test_2

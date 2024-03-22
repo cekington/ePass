@@ -13,6 +13,7 @@ let main () =
     try 
       let progI : I.prog = Elab.elab progE in
       let () = S.typecheck progI in
+      let () = print_string("Typecheck successful\n") in
       try 
         let output = D.exec progI in
         print_string(output)

@@ -27,7 +27,7 @@ let%expect_test "Test typecheck 1" =
 let%expect_test "Test typecheck 2" =
   let program =
       "type bool = +{'true : 1, 'false : 1}
-       exnproc test2 (x : bool) [y : bool] = 
+       proc test2 (x : bool) [y : bool] = 
           cancel x; cancel y
       "
   in print_endline (try_typecheck program);
@@ -37,12 +37,14 @@ let%expect_test "Test typecheck 2" =
 let%expect_test "Test typecheck 3" =
   let program =
       "type bool = +{'true : 1, 'false : 1}
-       exnproc test3 (x : bool) [y : bool] = 
+       proc test3 (x : bool) [y : bool] = 
           raise(cancel x; cancel y)
        exec test3
       "
   in print_endline (try_typecheck program);
-  [%expect{| (Failure "Exec exceptional process test3") |}]
+  [%expect{|
+    Warning: In process test3, raise (...) does not have its corresponding exceptional handler
+    (Failure "Exec process test3 has non empty antecedents") |}]
 ;;
 
 let%expect_test "Test typecheck 4" =
@@ -153,8 +155,8 @@ let%expect_test "Test typecheck 13" =
       "
   in print_endline (try_typecheck program);
   [%expect{|
-    (Failure
-      "In process test13, raise does not have its corresponding exceptional channel") |}]
+    Warning: In process test13, raise (...) does not have its corresponding exceptional handler
+    Typecheck successful |}]
 ;;
 
 let%expect_test "Test typecheck 14" =
@@ -289,9 +291,12 @@ let%expect_test "Test typecheck 18" =
 let%expect_test "Test typecheck 19" =
   let program =
       "type bool = +{'true : 1, 'false : 1}
-      exnproc test19 (x : bool) [y : bool] = 
+      proc test19 (x : bool) [y : bool] = 
         raise(cancel x; cancel y)
       "
   in print_endline (try_typecheck program);
-  [%expect{| Typecheck successful |}]
+  [%expect{|
+    Warning: In process test19, raise (...) does not have its corresponding exceptional handler
+    Typecheck successful |}]
 ;;
+

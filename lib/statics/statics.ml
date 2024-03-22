@@ -173,11 +173,11 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
         | I.Plus alts -> (
           match placec with 
           | I.Antecedent -> typecheck_branches I.Antecedent b alts gamma' delta' omega
-          | I.Succedent -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " of plus type is in succedent, cannot recieve branches to it")
+          | I.Succedent -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " of plus type is in succedent, cannot receive branches to it")
         )
         | I.With alts -> (
           match placec with 
-          | I.Antecedent -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " of with type is in succedent, cannot recieve branches to it") 
+          | I.Antecedent -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ " of with type is in succedent, cannot receive branches to it") 
           | I.Succedent -> typecheck_branches I.Succedent b alts gamma' delta' omega
         )
         | _ -> failwith ("In process " ^ proc_name ^ ", channel " ^ (I.Print.pp_channel c) ^ ": " ^ (I.Print.pp_typ tc) ^ " is not a choice type")
