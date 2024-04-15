@@ -119,10 +119,6 @@ let cancelAll (p : I.proc) : I.proc option =
   let all_chanconst : Iset.t = find_proc_all_chanconst Iset.empty p in
   generate_cancel_proc (Iset.to_list all_chanconst)
 
-let cancelAllopt : I.proc option -> I.proc option = function 
-  | None -> None 
-  | Some p -> cancelAll p
-
 let rec select (l : string) : (string * I.proc) list -> I.proc option = function 
   | [] -> None
   | (l', p) :: ls -> if String.equal l l' then Some p else select l ls
@@ -165,16 +161,17 @@ let rec step_par (env : I.prog) (changed : bool) (cfg : config) (viewed : procob
     | I.Send (c, msg, optp) -> (
       match split_config c [] ps with
       | Some (ps1rev, I.Recv (_, k), raise_r, ps2) -> (
-        let reduced_procobjs : procobj list = (
+        let reduced_procobjs : procobj = (
           match reduce msg k with
         | None -> (
-          match cancelAllopt optp with
-          | None -> [(I.Raise I.Null, raise_r)]
-          | Some cancelProc -> [(I.Raise cancelProc, raise_r)]
+          match cancelAllcont k with
+          | None -> (I.Raise I.Null, raise_r)
+          | Some cancelProc -> (I.Raise cancelProc, raise_r)
         )
-        | Some reduce_p -> ((match optp with | Some p' -> p' | None -> I.Null), raise_p) :: [(reduce_p, raise_r)]
+        | Some reduce_p -> (reduce_p, raise_r)
         ) in 
-        step_par env true ((List.rev ps1rev) @ ps2, cancelled, num) (List.append reduced_procobjs viewed)
+        step_par env true ((List.rev ps1rev) @ ps2, cancelled, num) 
+        (((match optp with | Some p' -> p' | None -> I.Null), raise_p) :: reduced_procobjs :: viewed)
       )
       | None -> step_par env changed (ps, cancelled, num) ((p, raise_p) :: viewed)
       | _ -> failwith "step_par send case raise Impossible error"

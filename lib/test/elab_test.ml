@@ -22,15 +22,14 @@ let%expect_test "Test elab 1" =
 let%expect_test "Test elab 2" =
   let program =
       "type nat = +{'zero : 1, 'succ : nat}
-      type tritree = +{'lead : 1, 'node : nat * tritree * tritree * tritree}"
+      type list = +{'leaf : 1, 'node : nat * list}"
   in print_endline (try_elab program);
   [%expect{|
     type %tp_0 = 1
     type nat = {'zero : %tp_0 + 'succ : nat}
-    type %tp_1 = tritree * tritree
-    type %tp_2 = tritree * %tp_1
-    type %tp_3 = nat * %tp_2
-    type tritree = {'lead : %tp_0 + 'node : %tp_3} |}]
+    type %tp_1 = nat * list
+    type list = {'leaf : %tp_0 + 'node : %tp_1}
+     |}]
 ;;
 
 let%expect_test "Test elab 3" =

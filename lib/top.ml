@@ -21,5 +21,5 @@ let main () =
         print_string("Runtime Error: " ^ e ^ "\n")
     with Failure e ->
       print_string("Typecheck Error: " ^ e ^ "\n")
-  with _e ->
-    print_string("Parse Error\n") 
+  with _ ->
+    print_string("Parse Error\n")  
