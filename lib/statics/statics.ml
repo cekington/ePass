@@ -238,7 +238,7 @@ let rec typecheck_proc (proc_name : string) (env : I.prog) (gamma : ctx) (delta 
     let (gamma', delta') = typecheck_proc proc_name env gamma delta true p1 in
     typecheck_proc proc_name env gamma' delta' omega p2
   | I.Raise p -> 
-    let () = if omega then () else print_string ("Warning: In process " ^ proc_name ^ ", raise (...) does not have its corresponding exceptional handler\n") in
+    let () = if omega then () else print_string ("Warning: In process " ^ proc_name ^ ", raise (...) does not have a corresponding exceptional handler\n") in
     typecheck_proc proc_name env gamma delta false p
   | I.Cut (c, t, p, q) ->
     let (gamma', delta') = typecheck_proc proc_name env gamma ((c, t) :: delta) false p in

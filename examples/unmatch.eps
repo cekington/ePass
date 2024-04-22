@@ -1,18 +1,19 @@
 type choice = +{'a : 1, 'b : 1, 'c : 1}
+type bool = +{'true : 1, 'false : 1}
 
-proc choose (x : 1) [c : choice] = 
+proc choose (x : bool) [c : choice] = 
     recv c (
-        'a => fwd x c
-      | 'c => fwd x c
+        'a => send x 'true; fwd x c
+      | 'c => send x 'false; fwd x c
     )
 
-proc test_choose1 (x : 1, y : 1) [] =
+proc test_choose1 (x : bool) [] =
     c : choice <- (send c 'a; send c ());
-    try call choose (x) [c] catch send y ()
+    call choose (x) [c]
  
-proc test_choose2 (x : 1, y : 1) [] =
+proc test_choose2 (x : bool) [] =
     c : choice <- (send c 'b; send c ());
-    try call choose (x) [c] catch send y ()
+    call choose (x) [c]
 
 exec test_choose1
 
